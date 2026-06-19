@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UX×AX 자동화 도구 모음</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body{font-family:Pretendard,system-ui,sans-serif;background:#fbfbfd;color:#16161a}
+  ::-webkit-scrollbar{width:11px}::-webkit-scrollbar-thumb{background:#d7d7e0;border-radius:8px;border:3px solid #fbfbfd}
+</style>
+<script>
+/* 로그 분석기(실행형 산출물 공통) — 비개발자가 콘솔 못 열어도 화면에 에러 표시 */
+(function(){function showErr(m){try{var p=document.getElementById("__err");if(!p){p=document.createElement("div");p.id="__err";p.style.cssText="position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;background:#b91c1c;color:#fff;font:13px Pretendard,system-ui,sans-serif;padding:10px 14px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.2);white-space:pre-wrap";document.body.appendChild(p);}p.textContent="⚠ "+m+"  · 이 메시지를 캡처해 전달하세요";}catch(e){}}
+window.addEventListener("error",function(e){showErr("오류: "+((e&&e.message)||(e&&e.error)||"unknown"));});
+window.addEventListener("unhandledrejection",function(e){showErr("오류(promise): "+((e&&e.reason&&e.reason.message)||(e&&e.reason)||"unknown"));});})();
+</script>
+</head>
+<body class="min-h-screen">
+<div class="mx-auto max-w-[1100px] px-6 py-12">
+  <header class="mb-10">
+    <div class="inline-flex items-center gap-2.5">
+      <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#5e6ad2] text-sm font-black text-white">AX</div>
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">UX×AX 자동화 도구 모음</h1>
+        <p class="text-sm text-slate-500">UX 디자인 프로세스 6단계 · 자동화 가능한 부분을 실제로 자동화한 도구들. 전부 무료(브라우저·로컬·복붙).</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== P0 · 프로젝트 정의 (리서치 시작 전 단계) ===== -->
+  <section id="p0" class="mb-12 rounded-2xl border bg-white p-5 shadow-[0_1px_2px_rgba(16,16,26,.04)]" style="border-color:#5e6ad244">
+    <div id="p0-root"></div>
+  </section>
+
+  <h2 class="mb-1 text-lg font-bold text-ink">스튜디오 (앱) — 연계성으로 묶음</h2>
+  <p class="mb-4 text-[13px] text-slate-500">29개 자동화를 모두 한 앱에 넣지 않고, 함께 쓰는 일끼리 앱당 3~5개로 묶었습니다. 엔진 설정은 모든 앱이 공유합니다.</p>
+  <div id="studios" class="mb-12 grid gap-3 md:grid-cols-2 xl:grid-cols-3"></div>
+
+  <h2 class="mb-1 text-lg font-bold text-ink">단계별 29개 도구 전체 (P1→P6)</h2>
+  <p class="mb-4 text-[13px] text-slate-500">UX 표준 프로세스 순서로 본 전체 목록. 각 카드는 해당 도구가 들어 있는 스튜디오의 탭으로 바로 엽니다.</p>
+  <div id="grid" class="space-y-9"></div>
+
+  <div class="mt-12 rounded-2xl border border-[#5e6ad2]/30 bg-[#f6f7fd] p-5">
+    <div class="font-bold">🎭 퍼소나 스튜디오 (별도 전용 앱)</div>
+    <p class="mt-1 text-sm text-slate-500">페르소나 생성 + 인터뷰 가능한 AI 사용자 + 자동 인터뷰 + 인사이트 합성. P2-A2 / P5-A5는 이 앱이 전담합니다.</p>
+    <a id="persona-link" href="../260618_퍼소나_스튜디오/v0.2/persona-studio.html" target="_blank" class="mt-3 inline-flex rounded-[10px] bg-[#5e6ad2] px-4 py-2.5 text-sm font-semibold text-white">↗ 퍼소나 스튜디오 열기</a>
+  </div>
+
+  <footer class="mt-10 text-center text-[13px] text-slate-400">한 번에 하나씩, 자동화 깊이 우선으로 제작 중 · 완료된 도구부터 바로 사용하세요.</footer>
+</div>
+
+<script>window.UXAX_CONFIG=window.UXAX_CONFIG||{};</script>
+<script src="config.js" onerror="void 0"></script>
+<script src="common.js"></script>
+<script>
+try{ if(window.UXAX_CONFIG&&window.UXAX_CONFIG.personaStudioUrl){var __pl=document.getElementById("persona-link"); if(__pl)__pl.href=window.UXAX_CONFIG.personaStudioUrl;} }catch(e){}
+const STUDIOS=[
+  {name:"리서치 스튜디오",file:"P1_리서치스튜디오.html",icon:"🔍",tools:"전사·요약 · 설문코딩 · VOC · 데스크리서치 · 인터뷰가이드",n:5,phase:"P1"},
+  {name:"정의 스튜디오",file:"P2_정의스튜디오.html",icon:"🧩",tools:"어피니티 · 여정맵 · HMW · PRD",n:4,phase:"P2"},
+  {name:"아이디에이션 스튜디오",file:"P3_아이디에이션스튜디오.html",icon:"💡",tools:"아이디어 발산 · IA · 사용자 플로우 · 우선순위",n:4,phase:"P3"},
+  {name:"콘텐츠·카피 스튜디오",file:"P4_콘텐츠스튜디오.html",icon:"✎",tools:"UX 라이팅 · 다국어 현지화 · 더미 콘텐츠",n:3,phase:"P4"},
+  {name:"디자인·핸드오프 스튜디오",file:"P5_디자인핸드오프스튜디오.html",icon:"⌘",tools:"와이어프레임 · 디자인 토큰 · 코드 스펙 · 체인지로그",n:4,phase:"P4·P6"},
+  {name:"품질 검증 스튜디오",file:"P6_품질검증스튜디오.html",icon:"✓",tools:"사용성 세션 · 휴리스틱/접근성 · 디자인 QA",n:3,phase:"P5·P6"},
+  {name:"피드백·운영 분석 스튜디오",file:"P7_피드백운영스튜디오.html",icon:"📊",tools:"피드백 분류 · A/B 해석 · 이상탐지 · 운영 피드백",n:4,phase:"P5·P6"},
+];
+const sgrid=document.getElementById("studios");
+STUDIOS.forEach(s=>{const a=document.createElement("a");a.href="./"+s.file;a.className="rounded-2xl border border-hair bg-white p-4 shadow-[0_1px_2px_rgba(16,16,26,.04)] transition hover:shadow-[0_8px_40px_rgba(16,16,26,.12)]";a.style.borderColor="#e9e9ef";a.innerHTML=`<div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="text-xl">${s.icon}</span><span class="text-[15px] font-bold text-ink">${s.name}</span></div><span class="rounded-full bg-[#eef0fb] px-2 py-0.5 text-[11px] font-bold text-[#4f5bd5]">${s.n}개</span></div><div class="mt-1.5 text-[13px] text-slate-500">${s.tools}</div><div class="mt-2 text-[12px] text-slate-400">${s.phase}</div>`;sgrid.appendChild(a);});
+const PHASES=[
+  {id:"P1",name:"리서치",icon:"🔍",tools:[
+    {id:"P1-A1",name:"인터뷰 자동 전사·요약",auto:"오디오→Whisper 전사→구조화 요약",file:"P1_리서치스튜디오.html#interview",status:"done"},
+    {id:"P1-A2",name:"설문 개방형 코딩",auto:"CSV 파싱·배치 코딩·집계 차트",file:"P1_리서치스튜디오.html#survey",status:"done"},
+    {id:"P1-A3",name:"리뷰·VOC 분석",auto:"임베딩 클러스터링·감성 분포",file:"P1_리서치스튜디오.html#voc",status:"done"},
+    {id:"P1-A4",name:"데스크 리서치 합성",auto:"PDF 추출·RAG·출처 연결",file:"P1_리서치스튜디오.html#desk",status:"done"},
+    {id:"P1-A5",name:"인터뷰 가이드 초안",auto:"생성·유도질문 점검·MD",file:"P1_리서치스튜디오.html#guide",status:"done"},
+  ]},
+  {id:"P2",name:"정의",icon:"🧩",tools:[
+    {id:"P2-A1",name:"어피니티 클러스터링",auto:"임베딩 군집·재배치 보드",file:"P2_정의스튜디오.html#affinity",status:"done"},
+    {id:"P2-A2",name:"페르소나 초안",auto:"퍼소나 스튜디오 전담",status:"studio"},
+    {id:"P2-A3",name:"사용자 여정맵",auto:"감정 곡선 차트 시각화",file:"P2_정의스튜디오.html#journey",status:"done"},
+    {id:"P2-A4",name:"인사이트→HMW",auto:"POV/HMW 변환·범위 점검",file:"P2_정의스튜디오.html#hmw",status:"done"},
+    {id:"P2-A5",name:"요구사항(PRD)",auto:"구조화 문서·AC export",file:"P2_정의스튜디오.html#prd",status:"done"},
+  ]},
+  {id:"P3",name:"아이디에이션",icon:"💡",tools:[
+    {id:"P3-A1",name:"아이디어 발산",auto:"멀티렌즈 생성·중복 제거",file:"P3_아이디에이션스튜디오.html#idea",status:"done"},
+    {id:"P3-A2",name:"IA·사이트맵",auto:"편집 트리 시각화·export",file:"P3_아이디에이션스튜디오.html#ia",status:"done"},
+    {id:"P3-A3",name:"사용자 플로우",auto:"Mermaid 자동 렌더·SVG",file:"P3_아이디에이션스튜디오.html#flow",status:"done"},
+    {id:"P3-A4",name:"우선순위 스코어링",auto:"매트릭스 계산·산점도",file:"P3_아이디에이션스튜디오.html#priority",status:"done"},
+  ]},
+  {id:"P4",name:"디자인",icon:"🎨",tools:[
+    {id:"P4-A1",name:"와이어프레임 명세",auto:"저-fi 미리보기·영역 명세",file:"P5_디자인핸드오프스튜디오.html#wire",status:"done"},
+    {id:"P4-A2",name:"디자인 토큰",auto:"CSS변수/JSON 토큰 생성·색칩",file:"P5_디자인핸드오프스튜디오.html#token",status:"done"},
+    {id:"P4-A3",name:"UX 라이팅",auto:"길이 측정·톤 점검",file:"P4_콘텐츠스튜디오.html#writing",status:"done"},
+    {id:"P4-A4",name:"더미 콘텐츠",auto:"JSON/CSV 생성·이미지 프롬프트",file:"P4_콘텐츠스튜디오.html#dummy",status:"done"},
+    {id:"P4-A5",name:"다국어 현지화",auto:"번역·길이 초과 검증·i18n",file:"P4_콘텐츠스튜디오.html#localize",status:"done"},
+  ]},
+  {id:"P5",name:"테스트",icon:"🧪",tools:[
+    {id:"P5-A1",name:"사용성 세션 분석",auto:"과업 판정·이슈 심각도",file:"P6_품질검증스튜디오.html#usability",status:"done"},
+    {id:"P5-A2",name:"휴리스틱·접근성",auto:"색대비 자동 계산·비전 점검",file:"P6_품질검증스튜디오.html#heuristic",status:"done"},
+    {id:"P5-A3",name:"피드백 분류",auto:"배치 분류·우선순위 차트",file:"P7_피드백운영스튜디오.html#feedback",status:"done"},
+    {id:"P5-A4",name:"A/B 해석",auto:"통계 계산(p값)·해설",file:"P7_피드백운영스튜디오.html#ab",status:"done"},
+    {id:"P5-A5",name:"가상 사용자",auto:"퍼소나 스튜디오 전담",status:"studio"},
+  ]},
+  {id:"P6",name:"핸드오프·개선",icon:"🚀",tools:[
+    {id:"P6-A1",name:"디자인→코드 스펙",auto:"비전·토큰 매핑·코드 생성",file:"P5_디자인핸드오프스튜디오.html#codespec",status:"done"},
+    {id:"P6-A2",name:"체인지로그",auto:"git log 파싱·분류·MD",file:"P5_디자인핸드오프스튜디오.html#changelog",status:"done"},
+    {id:"P6-A3",name:"디자인 QA",auto:"이미지 픽셀 diff·비전",file:"P6_품질검증스튜디오.html#qa",status:"done"},
+    {id:"P6-A4",name:"이상탐지",auto:"z-score 이상탐지·차트",file:"P7_피드백운영스튜디오.html#anomaly",status:"done"},
+    {id:"P6-A5",name:"운영 피드백 분류",auto:"라우팅·트렌드 차트",file:"P7_피드백운영스튜디오.html#ops",status:"done"},
+  ]},
+];
+const BADGE={done:["완료","bg-emerald-100 text-emerald-700"],next:["제작 예정(다음)","bg-amber-100 text-amber-700"],plan:["계획","bg-slate-100 text-slate-500"],studio:["퍼소나 스튜디오","bg-[#eef0fb] text-[#4f5bd5]"]};
+const grid=document.getElementById("grid");
+PHASES.forEach(ph=>{
+  const sec=document.createElement("section");
+  const done=ph.tools.filter(t=>t.status==="done").length;
+  sec.innerHTML=`<div class="mb-3 flex items-center gap-2"><span class="text-xl">${ph.icon}</span><h2 class="text-lg font-bold">${ph.id} · ${ph.name}</h2><span class="text-[13px] text-slate-400">${done}/${ph.tools.length} 제작</span></div>`;
+  const wrap=document.createElement("div");
+  wrap.className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3";
+  ph.tools.forEach(t=>{
+    const [label,cls]=BADGE[t.status]||BADGE.plan;
+    const clickable=t.status==="done"&&t.file;
+    const el=document.createElement(clickable?"a":"div");
+    if(clickable){el.href="./"+t.file;}
+    el.className="rounded-2xl border border-hair bg-white p-4 shadow-[0_1px_2px_rgba(16,16,26,.04)] "+(clickable?"transition hover:shadow-[0_8px_40px_rgba(16,16,26,.12)] cursor-pointer":"opacity-80");
+    el.style.borderColor="#e9e9ef";
+    el.innerHTML=`<div class="flex items-center justify-between gap-2"><span class="text-[12px] font-bold text-slate-400">${t.id}</span><span class="rounded-full px-2 py-0.5 text-[11px] font-semibold ${cls}">${label}</span></div>
+      <div class="mt-1.5 text-[15px] font-bold text-ink">${t.name}</div>
+      <div class="mt-1 text-[13px] text-slate-500">⚙ ${t.auto}</div>
+      ${clickable?'<div class="mt-2 text-[13px] font-semibold text-[#4f5bd5]">열기 →</div>':''}`;
+    wrap.appendChild(el);
+  });
+  sec.appendChild(wrap);
+  grid.appendChild(sec);
+});
+</script>
+
+<script>
+/* ===== P0 · 프로젝트 정의 — 한 페이지 폼 (자동저장→dossier · 예시 일괄 · P1 자동 프리필) ===== */
+(function(){
+  const PB_KEY="uxax_project_brief_v1", ACCENT="#5e6ad2";
+  const NS=()=> (window.UXAX&&typeof UXAX.setBrief==="function") ? UXAX : null;
+  function loadState(){
+    const ns=NS();
+    if(ns){const p=ns.loadProject();return {type:p.type||"", data:p.brief||{}};}
+    try{const o=JSON.parse(localStorage.getItem(PB_KEY));return o?{type:o.type||"",data:o.data||{}}:{type:"",data:{}};}catch(e){return {type:"",data:{}};}
+  }
+  function persist(){
+    const ns=NS();
+    if(ns) ns.setBrief(state.data,{name:state.data.name||"",type:state.type||""});
+    try{localStorage.setItem(PB_KEY,JSON.stringify({type:state.type,data:state.data,savedToWs:true}));}catch(e){}
+  }
+  function dl(fn,text){try{const b=new Blob(["﻿"+text],{type:"text/markdown;charset=utf-8"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(u);},100);}catch(e){}}
+  function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+  const TYPES=[
+    {id:"new",label:"신규",icon:"✨",desc:"처음 만드는 제품·기능"},
+    {id:"improve",label:"개선",icon:"🔧",desc:"이미 있는 걸 더 낫게"},
+    {id:"update",label:"업데이트",icon:"🔄",desc:"부분 변경·기능 추가"},
+  ];
+  const TYPEMAP={new:"신규",improve:"개선",update:"업데이트"};
+  // 필드별 의도된 크기: rows=최소 줄수, span=2면 한 줄 전체 폭. ph=빈 칸일 때 박스 안에 보이는 안내.
+  const FNEW={key:"hypothesis",title:"핵심 가설",rows:5,span:2,ph:"성공하려면 무엇이 사실이어야 하나요? 아직 검증 안 된 믿음 — 리서치(P1)에서 확인할 대상이에요.\n예) 판매자 신원·후기를 명확히 보여주면 첫 거래 불안이 줄어든다",ex:"판매자 신원과 후기를 명확히 보여주면 첫 거래 불안이 줄어든다."};
+  const FIMP={key:"current",title:"현재 문제점",rows:5,span:2,ph:"지금 무엇이 잘 안 되고 있나요? 개선의 출발점 — 관찰된 사실 위주로 적어주세요.\n예) 거래 시작 버튼까지 단계가 많고, 판매자 정보가 여러 화면에 흩어져 있다",ex:"거래 시작 버튼까지 단계가 많고, 판매자 정보가 여러 화면에 흩어져 있다."};
+  const FUPD={key:"scope",title:"변경 범위",rows:5,span:2,ph:"무엇을 바꾸나요? 어디까지? 건드리지 않을 것도 함께 적으면 좋아요.\n예) 상품 상세 화면에 신뢰 배지를 추가한다. 결제 흐름은 그대로 둔다",ex:"상품 상세 화면에 거래 시작 전 신뢰 배지를 추가한다. 결제 흐름은 그대로."};
+  function fieldsFor(type){
+    const head=[
+      {key:"name",title:"프로젝트 이름",rows:1,span:1,ph:"짧게. 예) 중고거래 첫 거래 신뢰 개선",ex:"중고거래 첫 거래 신뢰 개선"},
+      {key:"users",title:"대상 사용자",rows:2,span:1,ph:"누구를 위한 건가요? 한 사람을 떠올리며.\n예) 앱을 처음 쓰는 20~30대, 사기가 걱정돼 망설이는 사람",ex:"중고거래 앱을 처음 쓰는 20~30대. 사기가 걱정돼 첫 거래를 망설인다."},
+      {key:"oneline",title:"한 줄 정의",rows:2,span:2,ph:"무엇을 만들거나 바꾸나요? 한 문장으로.\n예) 처음 거래하는 사람이 안심하고 시작하도록 돕는 신뢰 장치를 만든다",ex:"처음 거래하는 사람이 안심하고 거래를 시작하도록 돕는 신뢰 장치를 만든다."},
+      {key:"problem",title:"배경·문제 (왜)",rows:5,span:2,ph:"왜 지금 이걸 하나요? 어떤 문제·기회가 있나요? 데이터·관찰·가설 무엇이든 — 불확실하면 \"~로 보임\"이라 적어도 OK.\n예) 첫 거래 이탈률이 높다. 사기 우려가 주요 이탈 사유로 보인다",ex:"첫 거래 이탈률이 높다. 사기 우려가 주요 이탈 사유로 보인다."},
+    ];
+    const mid = type==="new"?FNEW : type==="improve"?FIMP : type==="update"?FUPD : null;
+    const tail=[
+      {key:"success",title:"성공 기준",rows:2,span:1,ph:"무엇이 달라지면 성공? 숫자가 있으면 좋고, 없으면 관찰 가능한 변화로.\n예) 첫 거래 완료율 +15%",ex:"첫 거래 완료율 +15%. 거래 시작 전 이탈 감소."},
+      {key:"constraints",title:"제약 (선택)",rows:2,span:1,ph:"기간·플랫폼·하면 안 되는 것. 없으면 비워도 됩니다.\n예) 6주, iOS·Android, 결제 흐름 변경 불가",ex:"6주. iOS·Android 둘 다. 결제 흐름은 변경 불가.",optional:true},
+    ];
+    return head.concat(mid?[mid]:[], tail);
+  }
+
+  let _ld=loadState(); let state={type:_ld.type||"", data:_ld.data||{}};
+  function root(){return document.getElementById("p0-root");}
+  // 자동 높이 — 단, 필드별 최소 줄수(data-min)를 보장해 짧은 칸은 작게·긴 칸은 크게 시작.
+  function grow(ta){const min=(parseInt(ta.getAttribute("data-min"),10)||1)*23+18;ta.style.height="auto";ta.style.height=Math.max(ta.scrollHeight,min)+"px";}
+  function briefMd(){const d=state.data,fs=fieldsFor(state.type);let out="# 프로젝트 정의 — "+(d.name||"(이름 미정)")+"\n유형: "+(TYPEMAP[state.type]||"미정")+" · 작성일 2026-06-18\n\n";fs.forEach(f=>{const v=d[f.key];if(v&&String(v).trim())out+="- **"+f.title.replace(" (선택)","")+"**: "+String(v).trim()+"\n";});return out;}
+
+  function render(){
+    const fs=fieldsFor(state.type), name=state.data.name||"";
+    const typeBtns=TYPES.map(t=>{const on=state.type===t.id;return '<button data-type="'+t.id+'" class="rounded-xl border px-3 py-2 text-left transition '+(on?"text-white":"bg-white text-slate-700 hover:border-slate-300")+'" style="'+(on?("background:"+ACCENT+";border-color:"+ACCENT):"border-color:#e3e3ec")+'"><span class="text-[14px] font-bold">'+t.icon+" "+t.label+'</span><div class="text-[11px] '+(on?"text-white/80":"text-slate-400")+'">'+t.desc+'</div></button>';}).join("");
+    const fieldCells=fs.map(f=>{
+      const v=esc(state.data[f.key]||"");
+      return '<div class="'+(f.span===2?"sm:col-span-2":"")+'">'+
+        '<label class="text-[13px] font-bold text-slate-800">'+esc(f.title)+'</label>'+
+        '<textarea data-key="'+f.key+'" data-min="'+f.rows+'" rows="'+f.rows+'" placeholder="'+esc(f.ph)+'" class="mt-1 w-full resize-none overflow-hidden rounded-xl border bg-[#fbfbfd] px-3 py-2 text-[14px] leading-relaxed text-slate-900 placeholder:text-slate-400 placeholder:leading-relaxed outline-none focus:border-[#5e6ad2] focus:bg-white" style="border-color:#e3e3ec">'+v+'</textarea>'+
+      '</div>';
+    }).join("");
+    root().innerHTML=
+      '<div class="flex flex-wrap items-start justify-between gap-3">'+
+        '<div><div class="flex items-center gap-2"><span class="rounded-full bg-[#eef0fb] px-2.5 py-1 text-[12px] font-bold text-[#4f5bd5]">P0 · 시작점</span><h2 class="text-lg font-bold text-slate-900">프로젝트 정의</h2></div>'+
+        '<p class="mt-1.5 max-w-[680px] text-[13px] leading-relaxed text-slate-500">리서치(P1)를 시작하기 전에 <b>무엇을·누구를 위해·왜</b> 하는지 한 페이지에 정합니다. 여기서 정한 내용은 <b>리서치(P1) 첫 화면에 자동으로 채워지고</b>, 이후 모든 단계가 맥락으로 가져다 씁니다.</p></div>'+
+        '<div class="flex items-center gap-3 text-[12px]"><button id="p0-ex" class="font-semibold text-[#4f5bd5]">▶ 예시로 한 번에 채우기</button><button id="p0-reset" class="text-slate-400 hover:text-slate-600">처음부터</button></div>'+
+      '</div>'+
+      '<div class="mt-4 text-[13px] font-semibold text-slate-800">어떤 종류의 일인가요? <span class="font-normal text-slate-400">(고르면 맞춤 질문 1개가 더해져요)</span></div>'+
+      '<div class="mt-2 grid gap-2 sm:grid-cols-3" id="p0-types">'+typeBtns+'</div>'+
+      (state.type?"":'<div class="mt-2 text-[12px] text-amber-600">↑ 먼저 종류를 고르면 그 일에 맞는 질문이 더해집니다. (안 골라도 작성은 가능)</div>')+
+      '<div class="mt-5 grid gap-x-4 gap-y-4 sm:grid-cols-2">'+fieldCells+'</div>'+
+      '<div class="mt-2 text-right text-[12px] text-slate-400"><span id="p0-saved">자동 저장됨 ✓</span></div>'+
+      '<div class="mt-4 flex flex-wrap items-center gap-2 border-t pt-4" style="border-color:#eee">'+
+        '<button id="p0-copy" class="rounded-[10px] border px-4 py-2.5 text-[14px] font-semibold text-slate-700" style="border-color:#e3e3ec">⧉ 복사</button>'+
+        '<button id="p0-dl" class="rounded-[10px] border px-4 py-2.5 text-[14px] font-semibold text-slate-700" style="border-color:#e3e3ec">↧ MD 저장</button>'+
+        '<a href="./P1_리서치스튜디오.html" class="ml-auto inline-flex items-center gap-1.5 rounded-[10px] px-5 py-2.5 text-[14px] font-semibold text-white" style="background:'+ACCENT+'">🔍 리서치 시작 (P1) →</a>'+
+      '</div>';
+    // 타입 버튼
+    root().querySelectorAll("#p0-types [data-type]").forEach(b=>b.onclick=()=>{state.type=b.getAttribute("data-type");persist();render();});
+    // 필드 입력 (자동 높이 + 자동 저장)
+    const saved=document.getElementById("p0-saved");
+    root().querySelectorAll("textarea[data-key]").forEach(ta=>{
+      grow(ta);
+      ta.addEventListener("input",()=>{state.data[ta.getAttribute("data-key")]=ta.value;grow(ta);persist();saved.textContent="자동 저장됨 ✓";});
+    });
+    document.getElementById("p0-ex").onclick=()=>{fs.forEach(f=>{state.data[f.key]=f.ex||"";});persist();render();};
+    document.getElementById("p0-reset").onclick=()=>{if(confirm("처음부터 다시 작성할까요? 입력한 내용이 지워집니다.")){state={type:"",data:{}};persist();render();}};
+    document.getElementById("p0-copy").onclick=()=>{try{navigator.clipboard&&navigator.clipboard.writeText(briefMd());}catch(e){}const b=document.getElementById("p0-copy");b.textContent="✓ 복사됨";setTimeout(()=>{b.textContent="⧉ 복사";},1400);};
+    document.getElementById("p0-dl").onclick=()=>{dl("프로젝트정의_"+((name||"무제").replace(/[^\w가-힣]+/g,"_"))+".md",briefMd());};
+  }
+  render();
+})();
+</script>
+</body>
+</html>

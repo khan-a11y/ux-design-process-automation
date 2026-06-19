@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>피드백·운영 분석 스튜디오 (피드백·A/B·이상탐지·운영)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>/* JSX를 classic runtime(React.createElement)으로 강제 — automatic runtime의 import문이 file://(비모듈)에서 깨지는 것 방지 */try{Babel.registerPreset("uxax-react",{presets:[[Babel.availablePresets["react"],{runtime:"classic"}]]});}catch(e){}</script>
+<script>
+  tailwind.config={theme:{extend:{
+    colors:{brand:{DEFAULT:'#5e6ad2',hover:'#4f5bd5',light:'#eef0fb',faint:'#f6f7fd'},ink:{DEFAULT:'#16161a'},canvas:'#fbfbfd',hair:'#e9e9ef'},
+    fontFamily:{sans:['Pretendard','Pretendard Variable','-apple-system','system-ui','sans-serif']},
+    boxShadow:{soft:'0 1px 2px rgba(16,16,26,.04), 0 4px 16px rgba(16,16,26,.06)',pop:'0 8px 40px rgba(16,16,26,.16)'},
+    letterSpacing:{tighter2:'-0.02em'},
+  }}};
+</script>
+<style>
+  html{font-size:16px}body{background:#fbfbfd;color:#16161a;-webkit-font-smoothing:antialiased}
+  ::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:#d7d7e0;border-radius:8px;border:3px solid #fbfbfd}
+  .fade-in{animation:fadeIn .22s ease both}@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="root">
+  <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Pretendard,system-ui,sans-serif;color:#54576a;flex-direction:column;gap:14px">
+    <div style="width:40px;height:40px;border:3px solid #e9e9ef;border-top-color:#5e6ad2;border-radius:50%;animation:spin 1s linear infinite"></div>
+    <div style="font-size:15px">피드백·운영 분석 스튜디오를 불러오는 중…</div>
+  </div>
+</div>
+<script>window.UXAX_CONFIG=window.UXAX_CONFIG||{};</script>
+<script src="config.js" onerror="void 0"></script>
+<script type="text/babel" data-presets="uxax-react">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+const SETTINGS_KEY="uxax_studio_settings_v1";
+const MODELS=[{id:"claude-opus-4-8",label:"Claude Opus 4.8 · 최고 품질"},{id:"claude-sonnet-4-6",label:"Claude Sonnet 4.6 · 균형"},{id:"claude-haiku-4-5",label:"Claude Haiku 4.5 · 빠름"}];
+const cx=(...a)=>a.filter(Boolean).join(" ");
+const S=(v)=>v==null?"":Array.isArray(v)?v.map(S).join(", "):(typeof v==="object"?(v.text||v.name||JSON.stringify(v)):String(v));
+const arr=(v)=>Array.isArray(v)?v:(v==null?[]:[v]);
+const uid=(p="x")=>p+"_"+Math.random().toString(36).slice(2,9);
+function load(k,fb){try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb}catch(e){return fb}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){__uxaxSaveWarn();return false}}
+function __uxaxSaveWarn(){try{if(document.getElementById("uxax-savewarn"))return;var b=document.createElement("div");b.id="uxax-savewarn";b.style.cssText="position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#b91c1c;color:#fff;font:600 13px Pretendard,system-ui,sans-serif;padding:10px 16px;text-align:center;box-shadow:0 -4px 16px rgba(0,0,0,.18)";b.innerHTML="⚠ 저장 공간이 가득 차 자동 저장에 실패했습니다. 지금 결과를 <b>내보내기(MD/CSV/JSON)</b>로 백업하세요 — 새로고침하면 사라질 수 있습니다. <span style=\"text-decoration:underline;cursor:pointer\" onclick=\"this.parentNode.remove()\">닫기</span>";document.body.appendChild(b);}catch(e){}}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy")}catch(e2){}document.body.removeChild(ta);return true}}
+function download(fn,text,type="text/plain;charset=utf-8"){const b=new Blob(["﻿"+text],{type});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(u)},100);}
+/* ===== 공유 워크스페이스(보관함) — 도구·앱 간 산출물 전달 ===== */
+const WS_KEY="uxax_workspace_v1";const wsBus={notify:null};
+function wsLoad(){return load(WS_KEY,[]);}
+function wsAdd(title,text){if(!text||!String(text).trim())return false;const a=wsLoad();a.unshift({id:uid("ws"),title:title||"산출물",text:String(text),at:new Date().toLocaleString("ko-KR")});const ok=save(WS_KEY,a.slice(0,300));if(wsBus.notify)wsBus.notify();return ok;}
+function wsDel(id){save(WS_KEY,wsLoad().filter(x=>x.id!==id));if(wsBus.notify)wsBus.notify();}
+function wsClear(){save(WS_KEY,[]);if(wsBus.notify)wsBus.notify();}
+function wsUpdate(id,text){const a=wsLoad().map(x=>x.id===id?{...x,text:String(text)}:x);save(WS_KEY,a);if(wsBus.notify)wsBus.notify();}
+function _tryParse(s){try{return JSON.parse(s)}catch(e){}const c=s.replace(/\/\*[\s\S]*?\*\//g,"").replace(/^\s*\/\/.*$/gm,"").replace(/,(\s*[}\]])/g,"$1");try{return JSON.parse(c)}catch(e){}return undefined}
+function parseJsonLoose(text){if(!text)return null;let t=String(text).trim();const f=t.match(/```(?:json)?\s*([\s\S]*?)```/i);if(f)t=f[1].trim();let r=_tryParse(t);if(r!==undefined)return r;const a=t.indexOf("["),o=t.indexOf("{");const st=a===-1?o:o===-1?a:Math.min(a,o);if(st===-1)return null;const op=t[st],cl=op==="["?"]":"}";let d=0,ins=false,esc=false;for(let i=st;i<t.length;i++){const c=t[i];if(ins){if(esc)esc=false;else if(c==="\\")esc=true;else if(c==='"')ins=false;}else{if(c==='"')ins=true;else if(c===op)d++;else if(c===cl){d--;if(!d){const r2=_tryParse(t.slice(st,i+1));if(r2!==undefined)return r2;}}}}const r3=_tryParse(t.slice(st));return r3===undefined?null:r3;}
+function toCSV(rows){return rows.map(r=>r.map(c=>{const s=S(c);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(",")).join("\n");}
+
+/* ===== 통계 (실제 계산) ===== */
+function erf(x){const t=1/(1+0.3275911*Math.abs(x));const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return x>=0?y:-y;}
+function normCdf(x){return 0.5*(1+erf(x/Math.sqrt(2)));}
+function abTest(cA,nA,cB,nB){if(!nA||!nB)return null;const pA=cA/nA,pB=cB/nB;const p=(cA+cB)/(nA+nB);const se=Math.sqrt(p*(1-p)*(1/nA+1/nB))||1e-9;const z=(pB-pA)/se;const pval=2*(1-normCdf(Math.abs(z)));const seD=Math.sqrt(pA*(1-pA)/nA+pB*(1-pB)/nB)||1e-9;const lift=pB-pA;return{pA,pB,z,pval,lift,ci:[lift-1.96*seD,lift+1.96*seD],sig:pval<0.05,relLift:pA?lift/pA:0};}
+function detectAnomalies(series,thr=2){const vals=series.map(s=>s.v);if(!vals.length)return{points:[],mean:0,sd:0};const mean=vals.reduce((a,b)=>a+b,0)/vals.length;const sd=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/vals.length)||1;return{points:series.map(s=>({...s,z:(s.v-mean)/sd,anom:Math.abs((s.v-mean)/sd)>=thr})),mean,sd};}
+
+/* ===== LLM 엔진 ===== */
+const API_URL="https://api.anthropic.com/v1/messages";
+async function callClaude({apiKey,model,system,messages,maxTokens=4096,stream=false,onDelta,signal}){if(!apiKey){const e=new Error("API 키가 없습니다");e.code="NO_KEY";throw e;}const body={model,max_tokens:maxTokens,messages};if(system)body.system=system;if(stream)body.stream=true;const res=await fetch(API_URL,{method:"POST",headers:{"content-type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body),signal});if(!res.ok){let d="";try{const j=await res.json();d=j.error?.message||JSON.stringify(j)}catch(e){try{d=await res.text()}catch(e2){}}const err=new Error("API "+res.status+(d?" · "+d:""));err.status=res.status;throw err;}if(!stream){const data=await res.json();return (data.content||[]).map(b=>b.text||"").join("");}const rd=res.body.getReader();const dec=new TextDecoder();let buf="",full="";while(true){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;while((i=buf.indexOf("\n\n"))>=0){const blk=buf.slice(0,i);buf=buf.slice(i+2);const ln=blk.split("\n").find(l=>l.startsWith("data:"));if(!ln)continue;const p=ln.slice(5).trim();if(!p||p==="[DONE]")continue;try{const evt=JSON.parse(p);if(evt.type==="content_block_delta"&&evt.delta?.type==="text_delta"){full+=evt.delta.text;onDelta&&onDelta(full,evt.delta.text);}}catch(e){}}}return full;}
+async function ollamaListModels(url,timeoutMs=3000){const base=(url||"http://127.0.0.1:11434").replace(/\/$/,"");const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),timeoutMs);try{const res=await fetch(base+"/api/tags",{signal:ctrl.signal});if(!res.ok)throw new Error("Ollama "+res.status);const d=await res.json();return (d.models||[]).map(m=>m.name);}finally{clearTimeout(t);}}
+async function callOllama({url,model,system,messages,maxTokens=2000,stream=false,onDelta,signal}){const base=(url||"http://127.0.0.1:11434").replace(/\/$/,"");const msgs=[];if(system)msgs.push({role:"system",content:system});for(const m of messages)msgs.push({role:m.role,content:m.content});const res=await fetch(base+"/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({model,messages:msgs,stream:!!stream,options:{num_predict:maxTokens,num_ctx:8192}}),signal});if(!res.ok){let d="";try{d=(await res.json()).error||""}catch(e){}throw new Error("Ollama "+res.status+(d?" · "+d:""));}if(!stream){const data=await res.json();return (data.message&&data.message.content)||"";}const rd=res.body.getReader();const dec=new TextDecoder();let buf="",full="";while(true){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let nl;while((nl=buf.indexOf("\n"))>=0){const ln=buf.slice(0,nl).trim();buf=buf.slice(nl+1);if(!ln)continue;try{const evt=JSON.parse(ln);if(evt.message?.content){full+=evt.message.content;onDelta&&onDelta(full,evt.message.content);}}catch(e){}}}return full;}
+const WEBLLM_PREFERRED=["Qwen2.5-3B-Instruct-q4f16_1-MLC","Qwen2.5-7B-Instruct-q4f16_1-MLC","Llama-3.2-3B-Instruct-q4f16_1-MLC"];
+const webllmState={lib:null,engine:null,modelId:null};const webllmLoader={active:false,progress:0,text:"",notify:null,set(a,p,t){this.active=a;this.progress=p;this.text=t;this.notify&&this.notify();}};
+function hasWebGPU(){return typeof navigator!=="undefined"&&!!navigator.gpu;}
+async function loadWebLLMLib(){if(!webllmState.lib)webllmState.lib=await import("https://esm.run/@mlc-ai/web-llm");return webllmState.lib;}
+async function getWebLLMModels(){const w=await loadWebLLMLib();return (w.prebuiltAppConfig?.model_list||[]).map(m=>m.model_id);}
+async function ensureWebLLM(modelId){if(!hasWebGPU())throw new Error("WebGPU 미지원");if(webllmState.engine&&webllmState.modelId===modelId)return webllmState.engine;const w=await loadWebLLMLib();const ids=(w.prebuiltAppConfig?.model_list||[]).map(m=>m.model_id);let id=modelId;if(!ids.includes(id))id=WEBLLM_PREFERRED.find(x=>ids.includes(x))||ids[0];if(webllmState.engine){try{await webllmState.engine.unload()}catch(e){}webllmState.engine=null;}webllmLoader.set(true,0,"브라우저 AI 준비 중…");let le=null;try{for(let a=1;a<=4;a++){try{webllmState.engine=await w.CreateMLCEngine(id,{initProgressCallback:(r)=>webllmLoader.set(true,r.progress||0,(a>1?"(재시도 "+a+") ":"")+(r.text||""))},{context_window_size:8192});webllmState.modelId=id;le=null;break;}catch(e){le=e;await new Promise(r=>setTimeout(r,1500));}}}finally{webllmLoader.set(false,1,"");}if(le)throw new Error("브라우저 AI 다운로드 실패");return webllmState.engine;}
+async function callWebLLM({model,system,messages,maxTokens=2000,stream=false,onDelta}){const eng=await ensureWebLLM(model);const msgs=[];if(system)msgs.push({role:"system",content:system});for(const m of messages)msgs.push({role:m.role,content:m.content});const cap=Math.min(maxTokens,3600);if(stream){let full="";const ch=await eng.chat.completions.create({messages:msgs,stream:true,max_tokens:cap});for await(const c of ch){const d=(c.choices&&c.choices[0]&&c.choices[0].delta&&c.choices[0].delta.content)||"";if(d){full+=d;onDelta&&onDelta(full,d);}}return full;}const r=await eng.chat.completions.create({messages:msgs,max_tokens:cap});return (r.choices&&r.choices[0]&&r.choices[0].message&&r.choices[0].message.content)||"";}
+const manualBridge={queue:[],notify:null,request(p,m){return new Promise((res,rej)=>{this.queue.push({id:uid("m"),promptText:p,meta:m||{},resolve:res,reject:rej});this.notify&&this.notify();})},current(){return this.queue[0]||null},count(){return this.queue.length},resolveCurrent(t){const c=this.queue.shift();if(c)c.resolve(t);this.notify&&this.notify();},rejectCurrent(e){const c=this.queue.shift();if(c)c.reject(e||new Error("취소"));this.notify&&this.notify();}};
+async function callManual({system,messages,onDelta,meta}){let t="";if(system)t+=system+"\n\n";t+=messages.map(m=>m.content).join("\n\n");const out=await manualBridge.request(t,meta);onDelta&&onDelta(out,out);return out;}
+async function runLLM(settings,opts){const b=settings.backend||"manual";if(b==="ollama")return callOllama({url:settings.ollamaUrl,model:settings.ollamaModel,...opts});if(b==="webllm")return callWebLLM({model:settings.webllmModel,...opts});if(b==="manual")return callManual(opts);return callClaude({apiKey:settings.apiKey,model:settings.model,...opts});}
+function backendReady(s){const b=s.backend||"manual";if(b==="manual")return true;if(b==="ollama")return !!s.ollamaModel;if(b==="webllm")return hasWebGPU();return !!(s.apiKey&&s.apiKey.length>10);}
+function backendLabel(s){const b=s.backend||"manual";if(b==="manual")return "수동/챗GPT 모드";if(b==="ollama")return "로컬 Ollama"+(s.ollamaModel?" · "+s.ollamaModel:"");if(b==="webllm")return "브라우저 내장 AI";return "Anthropic API";}
+
+/* ===== 프롬프트 ===== */
+const SYS="당신은 프로덕트 애널리스트이자 운영 분석가입니다. 데이터를 구조화하고 실행 가능한 권고를 냅니다. 한국어로, JSON 요청 시 순수 JSON만 출력합니다.";
+function buildFeedbackPrompt(chunk){return `아래 피드백을 처리하세요. 각 항목을 주제·유형(버그/요청/칭찬/이탈/기타)·감성(pos/neu/neg)·우선순위(1~5)로 분류하고 즉시대응 필요 여부 표시. JSON만(입력 id 유지):
+{ "items":[{"id":"id","topic":"주제","type":"버그|요청|칭찬|이탈|기타","sentiment":"pos|neu|neg","priority":1,"urgent":true}] }
+
+[피드백]
+${chunk.map(r=>`(${r.id}) ${r.text}`).join("\n")}`;}
+function buildAbInterpretPrompt(stats,ctx){return `아래는 이미 계산된 A/B 테스트 통계입니다. 비전문가용으로 해석하세요.${ctx?"\n맥락: "+ctx:""}
+계산값: A 전환율 ${(stats.pA*100).toFixed(2)}%, B 전환율 ${(stats.pB*100).toFixed(2)}%, 절대 차이 ${(stats.lift*100).toFixed(2)}%p, p값 ${stats.pval.toFixed(4)}, 95% 신뢰구간 [${(stats.ci[0]*100).toFixed(2)}%p, ${(stats.ci[1]*100).toFixed(2)}%p], 유의성 ${stats.sig?"유의함(p<0.05)":"유의하지 않음"}.
+JSON만: { "summary":"3줄 평이한 요약", "recommendation":"채택|보류|재실험", "rationale":"근거", "caveats":["주의할 편향·한계"] }`;}
+function buildAnomalyHypoPrompt(anoms,ctx){return `아래는 통계적으로 탐지된 이상치(평균 대비 z-score 큰 지점)입니다. 각 이상의 가능한 원인 가설과 확인 방법을 제시하세요.${ctx?"\n맥락: "+ctx:""}
+JSON만: { "items":[{"when":"시점","value":"값","z":"z-score","hypotheses":["원인 가설"],"check":"확인 방법"}] }
+
+[이상치]
+${anoms.map(a=>`${a.t}: ${a.v} (z=${a.z.toFixed(2)})`).join("\n")}`;}
+function buildOpsPrompt(chunk){return `아래 운영 피드백을 처리하세요. 주제·담당팀(제품/디자인/CS/개발) 분류·라우팅, 중복 병합·빈도, 급증 토픽, 백로그(제목·설명·우선순위). JSON만:
+{ "routed":[{"topic":"주제","team":"제품|디자인|CS|개발","count":0}], "backlog":[{"title":"제목","desc":"설명","priority":1}], "trending":["급증 토픽"] }
+
+[피드백]
+${chunk.map((t,i)=>`${i+1}. ${t}`).join("\n")}`;}
+
+/* ===== UI ===== */
+function Spinner({size=18}){return <span className="inline-block animate-spin rounded-full border-2 border-slate-300 border-t-brand align-[-2px]" style={{width:size,height:size}}/>;}
+function Btn({children,onClick,variant="primary",size="md",disabled,className,...rest}){const v={primary:"bg-brand text-white hover:bg-brand-hover shadow-sm",soft:"bg-brand-light text-brand-hover hover:bg-[#e3e6f7]",ghost:"text-slate-600 hover:bg-slate-100",outline:"border border-hair bg-white text-slate-700 hover:bg-slate-50",danger:"text-rose-600 hover:bg-rose-50"}[variant];const s={sm:"px-3 py-1.5 text-[13px]",md:"px-4 py-2.5 text-sm",lg:"px-5 py-3 text-[15px]"}[size];return <button onClick={onClick} disabled={disabled} className={cx("inline-flex items-center justify-center gap-2 rounded-[10px] font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed",v,s,className)} {...rest}>{children}</button>;}
+function Field({label,hint,children}){return <label className="block"><div className="mb-1.5 flex items-baseline gap-2"><span className="text-sm font-semibold text-ink">{label}</span>{hint&&<span className="text-[13px] text-slate-400">{hint}</span>}</div>{children}</label>;}
+const inputVisual="rounded-[10px] border border-hair bg-white px-3.5 py-2.5 text-[15px] text-ink placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 transition";
+const inputCls="w-full "+inputVisual;
+function Card({children,className}){return <div className={cx("rounded-2xl border border-hair bg-white shadow-soft",className)}>{children}</div>;}
+function Chip({children,className}){return <span className={cx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 ring-inset",className||"bg-slate-100 text-slate-600 ring-slate-200/60")}>{children}</span>;}
+function Toast({toast}){if(!toast)return null;const m={info:"bg-ink",error:"bg-rose-600",ok:"bg-brand-hover"};return <div className="fixed bottom-7 left-1/2 z-[70] -translate-x-1/2"><div className={cx("rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-pop fade-in",m[toast.type]||m.info)}>{toast.msg}</div></div>;}
+function WsSave({title,getText,toast}){const[d,setD]=useState(false);return <Btn size="sm" variant="soft" onClick={()=>{const t=getText&&getText();if(!t||!String(t).trim()){toast&&toast("error","저장할 결과가 없어요");return;}wsAdd(title,t);setD(true);toast&&toast("ok","보관함에 저장됨 — 다른 도구·앱에서 가져올 수 있어요");setTimeout(()=>setD(false),1600);}}>{d?"✓ 저장됨":"📤 보관함"}</Btn>;}
+function WsPull({onPick,label}){const arr=wsLoad();if(!arr.length)return null;return <select className={cx(inputVisual,"mb-2 w-full py-1.5 text-[13px]")} defaultValue="" onChange={e=>{const a=arr.find(x=>x.id===e.target.value);if(a&&onPick)onPick(a.text);e.target.value="";}}><option value="">{label||"📥 보관함에서 가져오기…"}</option>{arr.map(a=><option key={a.id} value={a.id}>{a.title} · {a.at}</option>)}</select>;}
+function WorkspaceModal({onClose,toast}){const[,f]=useState(0);const[edit,setEdit]=useState(null);const[draft,setDraft]=useState("");const arr=wsLoad();return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={onClose}><Card className="max-h-[88vh] w-full max-w-2xl overflow-y-auto p-6 shadow-pop fade-in"><div onClick={e=>e.stopPropagation()}><div className="mb-4 flex items-center justify-between"><div><h3 className="text-lg font-bold text-ink">📋 보관함</h3><p className="text-[13px] text-slate-400">도구·앱이 공유합니다. 결과를 <b>📤 보관함</b>으로 저장하고, 여기서 <b>편집·확정</b>한 뒤 입력칸 위 <b>📥 가져오기</b>로 다음 단계에 넘기세요.</p></div><button className="text-slate-400 hover:text-ink" onClick={onClose}>✕</button></div>{!arr.length?<p className="rounded-xl bg-slate-50 p-4 text-[14px] text-slate-500">아직 저장된 산출물이 없어요. 결과 카드의 <b>📤 보관함</b> 버튼으로 저장하세요.</p>:<div className="space-y-2">{arr.map(a=><Card key={a.id} className="p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="truncate font-semibold text-ink">{a.title}</div><div className="text-[12px] text-slate-400">{a.at}</div></div><div className="flex shrink-0 gap-1">{edit===a.id?<Btn size="sm" onClick={()=>{wsUpdate(a.id,draft);setEdit(null);toast&&toast("ok","수정 저장됨");}}>저장</Btn>:<Btn size="sm" variant="outline" onClick={()=>{setEdit(a.id);setDraft(a.text);}}>편집</Btn>}<Btn size="sm" variant="outline" onClick={()=>{copyText(a.text);toast&&toast("ok","복사됨");}}>복사</Btn><Btn size="sm" variant="danger" onClick={()=>{wsDel(a.id);if(edit===a.id)setEdit(null);f(n=>n+1);}}>삭제</Btn></div></div>{edit===a.id?<textarea value={draft} onChange={e=>setDraft(e.target.value)} rows={8} className={cx(inputCls,"mt-2 resize-y text-[12px]")}/>:<pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[12px] text-slate-600">{String(a.text).slice(0,600)}</pre>}</Card>)}</div>}{!!arr.length&&<div className="mt-4 flex justify-end gap-2"><Btn size="sm" variant="outline" onClick={()=>download("uxax-workspace.json",JSON.stringify(arr,null,2),"application/json")}>↧ 전체 JSON</Btn><Btn size="sm" variant="ghost" onClick={()=>{if(confirm("보관함 전체를 비울까요?")){wsClear();f(n=>n+1);}}}>전체 비우기</Btn></div>}</div></Card></div>;}
+function WorkspaceFab({toast}){const[open,setOpen]=useState(false);const[,f]=useState(0);useEffect(()=>{const fn=()=>f(n=>n+1);wsBus.notify=fn;return()=>{if(wsBus.notify===fn)wsBus.notify=null;};},[]);const n=wsLoad().length;return <React.Fragment><button onClick={()=>setOpen(true)} className="no-print fixed bottom-5 right-5 z-[60] flex items-center gap-1.5 rounded-full bg-brand px-4 py-2.5 text-[13px] font-bold text-white shadow-pop hover:bg-brand-hover" title="보관함 (도구·앱 공유)">📋 보관함{n?(" "+n):""}</button>{open&&<WorkspaceModal onClose={()=>setOpen(false)} toast={toast}/>}</React.Fragment>;}
+function StepHead({n,title,sub,done}){return <div className="mb-3 flex items-center gap-3"><div className={cx("flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold",done?"bg-emerald-500 text-white":"bg-brand text-white")}>{done?"✓":n}</div><div><div className="text-[17px] font-bold text-ink">{title}</div>{sub&&<div className="text-[13px] text-slate-400">{sub}</div>}</div></div>;}
+function SentChip({s}){const m={pos:["긍정","bg-emerald-50 text-emerald-600 ring-emerald-100"],neu:["중립","bg-slate-100 text-slate-500 ring-slate-200/60"],neg:["부정","bg-rose-50 text-rose-600 ring-rose-100"]};const[t,c]=m[s]||[s,"bg-slate-100 text-slate-500"];return <Chip className={c}>{t}</Chip>;}
+/* ===== 학습 레이어 (전체 프로세스 내비 + 초급자 ?도움말 + 예제) ===== */
+const PROCESS=[
+  {id:"P1",file:"P1_리서치스튜디오.html",icon:"🔍",name:"리서치"},
+  {id:"P2",file:"P2_정의스튜디오.html",icon:"🧩",name:"정의"},
+  {id:"P3",file:"P3_아이디에이션스튜디오.html",icon:"💡",name:"아이디에이션"},
+  {id:"P4",file:"P4_콘텐츠스튜디오.html",icon:"✎",name:"콘텐츠"},
+  {id:"P5",file:"P5_디자인핸드오프스튜디오.html",icon:"⌘",name:"디자인·핸드오프"},
+  {id:"P6",file:"P6_품질검증스튜디오.html",icon:"✓",name:"품질검증"},
+  {id:"P7",file:"P7_피드백운영스튜디오.html",icon:"📊",name:"피드백·운영"},
+];
+const CURRENT_PHASE="P7";
+function ProcessNav({current}){
+  const i=PROCESS.findIndex(p=>p.id===current);const next=PROCESS[i+1];
+  return <div className="border-t border-hair bg-white/70"><div className="mx-auto flex max-w-[1100px] items-center gap-1 overflow-x-auto px-4 py-2 text-[12px]"><span className="mr-1 shrink-0 font-bold text-slate-400">UX 프로세스</span>{PROCESS.map((p,idx)=>{const cur=p.id===current;return <React.Fragment key={p.id}>{idx>0&&<span className="shrink-0 text-slate-300">→</span>}<a href={"./"+p.file} title={p.id+" "+p.name+" 단계로 이동"} className={cx("flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 font-semibold transition",cur?"bg-brand text-white":"text-slate-500 hover:bg-slate-100")}><span>{p.icon}</span><span>{p.id}</span><span className={cur?"":"hidden sm:inline"}>{p.name}</span></a></React.Fragment>;})}<span className="ml-2 hidden shrink-0 text-slate-400 md:inline">· 지금 <b className="text-brand-hover">{current} {PROCESS[i]?.name}</b>{next?<> · 다음 <b className="text-slate-500">{next.id} {next.name}</b></>:<> · 마지막 — 개선은 다시 <b className="text-slate-500">P3</b>로 순환</>}</span></div></div>;
+}
+function HelpCue({title,faqs,settings,openSettings,toast}){
+  const[open,setOpen]=useState(false);const[q,setQ]=useState("");const[a,setA]=useState("");const[busy,setBusy]=useState(false);
+  const ask=async()=>{if(!q.trim())return;if(!backendReady(settings)){toast&&toast("error","AI 엔진을 먼저 설정하세요(⚙)");openSettings&&openSettings();return;}setBusy(true);setA("");try{const out=await runLLM(settings,{system:"당신은 UX 프로세스를 가르치는 친절한 시니어 멘토입니다. UX·개발을 잘 모르는 초급 디자이너에게 전문용어는 풀어서, 쉬운 한국어로 3~5문장으로 답합니다.",messages:[{role:"user",content:(title?"["+title+"] ":"")+q}],maxTokens:500,stream:false,meta:{who:"학습 도움말"}});setA(out||"(답이 비었어요)");}catch(e){setA("실패: "+(e.message||e));}finally{setBusy(false);}};
+  return <span className="relative inline-block align-middle"><button type="button" onClick={()=>setOpen(o=>!o)} title="이게 뭔지 물어보기" className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-light text-[12px] font-bold text-brand-hover hover:bg-brand hover:text-white">?</button>{open&&<div className="absolute left-0 top-7 z-[75] w-72 rounded-xl border border-hair bg-white p-3 text-left shadow-pop fade-in" onClick={e=>e.stopPropagation()}><div className="mb-1.5 flex items-center justify-between"><span className="text-[12px] font-bold text-brand-hover">❔ {title||"도움말"}</span><button className="text-slate-400 hover:text-ink" onClick={()=>setOpen(false)}>✕</button></div><ul className="space-y-1.5 text-[12.5px] leading-relaxed text-slate-600">{(faqs||[]).map((f,i)=><li key={i}><b className="text-ink">{f.q}</b><div>{f.a}</div></li>)}</ul><div className="mt-2 border-t border-hair pt-2"><div className="text-[11px] font-semibold text-slate-400">더 궁금하면 AI 멘토에게</div><div className="mt-1 flex gap-1"><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")ask();}} placeholder="예: 이 단계는 왜 해요?" className={cx(inputVisual,"min-w-0 flex-1 py-1 text-[12px]")}/><Btn size="sm" onClick={ask} disabled={busy}>{busy?<Spinner size={12}/>:"질문"}</Btn></div>{a&&<div className="mt-2 whitespace-pre-wrap rounded-lg bg-brand-faint p-2 text-[12.5px] leading-relaxed text-slate-700">{a}</div>}</div></div>}</span>;
+}
+const DEMO_FEEDBACK="결제가 자꾸 실패해요\n다크모드 추가해주세요\n배송이 빨라서 좋았어요\n안전결제 한도가 너무 낮아요\n채팅 알림이 안 와요\n첫 거래 가이드가 도움됐어요\n검색 필터 추가 요청\n앱이 가끔 튕겨요";
+const FEEDBACK_FAQ=[{q:"피드백 분류가 뭐예요?",a:"흩어진 사용자 의견을 주제·유형(버그/요청/칭찬)·감성·우선순위로 자동 정리하는 거예요. ‘뭐가 많고 급한지’가 보여요."},{q:"즉시대응(🔴)이 뭐예요?",a:"버그·이탈 신호처럼 빨리 봐야 하는 항목 표시예요. 먼저 확인하세요."}];
+const DEMO_AB={cA:"320",nA:"5000",cB:"372",nB:"5000",ctx:"안전결제 버튼 색상 A/B, 14일"};
+const AB_FAQ=[{q:"A/B 테스트가 뭐예요?",a:"두 안(A·B)을 사용자에게 나눠 보여주고 어느 쪽이 더 나은지 비교하는 실험이에요."},{q:"p값이 뭐예요?",a:"차이가 ‘우연’일 확률이에요. 0.05보다 작으면 우연으로 보기 어렵다(유의하다)고 봐요."}];
+const DEMO_ANOMALY={text:"2026-06-01  3.2\n2026-06-02  3.1\n2026-06-03  3.3\n2026-06-04  1.4\n2026-06-05  3.2\n2026-06-06  3.0\n2026-06-07  3.4",ctx:"일일 결제 전환율(%)"};
+const ANOMALY_FAQ=[{q:"이상탐지가 뭐예요?",a:"지표가 평소와 크게 다른 날을 자동으로 찾아내는 거예요. KPI가 갑자기 떨어진 날을 빨리 잡아요."},{q:"z-score가 뭐예요?",a:"평균에서 표준편차의 몇 배만큼 떨어졌는지예요. 보통 2 이상이면 ‘평소와 다르다’고 봐요."}];
+const DEMO_OPS="앱이 자꾸 튕겨요 (안드로이드)\n검색 필터 추가 요청\n안전결제 한도 문의\n결제 후 알림이 안 옴\n다크모드 요청\n로그인이 자꾸 풀려요\n상품 등록이 느려요\n신뢰 배지 정책 문의";
+const OPS_FAQ=[{q:"운영 피드백이 뭐예요?",a:"출시 후 계속 들어오는 사용자 목소리예요. 담당팀으로 분배(라우팅)하고 개선 백로그로 쌓아요."},{q:"라우팅이 뭐예요?",a:"각 피드백을 알맞은 팀(제품/디자인/CS/개발)에 자동 배정하는 거예요."}];
+
+function Guide({what,where,why,prep,inputs,steps,tips,note,defaultOpen}){const[open,setOpen]=useState(defaultOpen);const Sec=({icon,title,children})=><div><div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-brand-hover">{icon} {title}</div><div className="text-[14px] leading-relaxed text-slate-600">{children}</div></div>;return <div className="mb-5 overflow-hidden rounded-2xl border border-brand/20 bg-brand-faint"><button className="flex w-full items-center justify-between px-5 py-3 text-left" onClick={()=>setOpen(o=>!o)}><span className="flex items-center gap-2 text-[14px] font-bold text-brand-hover">📖 사용법 · 학습 가이드</span><span className="text-brand-hover">{open?"▲":"▼"}</span></button>{open&&<div className="space-y-4 border-t border-brand/15 px-5 py-4">{what&&<Sec icon="📘" title="무엇을 하나">{what}</Sec>}{where&&<Sec icon="🧭" title="프로세스에서 위치">{where}</Sec>}{why&&<Sec icon="💡" title="왜 중요한가">{why}</Sec>}{prep&&<Sec icon="📎" title="준비물">{prep}</Sec>}{inputs&&<Sec icon="✍️" title="입력 가이드 — 이렇게 넣어야 잘 나와요"><ul className="space-y-2">{inputs.map((x,i)=><li key={i}><b className="text-ink">{x.field}</b> — {x.desc}{x.ex&&<div className="mt-0.5 rounded bg-white/70 px-2 py-1 text-[12px] text-slate-500">예) {x.ex}</div>}</li>)}</ul></Sec>}{steps&&<Sec icon="🪜" title="사용 단계"><ol className="space-y-1.5">{steps.map((s,i)=><li key={i} className="flex gap-2"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">{i+1}</span><span><b className="text-ink">{s.t}</b> — {s.d}</span></li>)}</ol></Sec>}{tips&&<Sec icon="⚠️" title="팁 · 주의"><ul className="ml-4 list-disc space-y-1 text-[13px]">{tips.map((t,i)=><li key={i}>{t}</li>)}</ul></Sec>}{note&&<div className="rounded-lg bg-amber-50 px-3 py-2 text-[13px] text-amber-800">💡 {note}</div>}</div>}</div>;}
+function ProgressOverlay({state,title,emoji}){if(!state.active)return null;const pct=Math.round((state.progress||0)*100);return <div className="fixed inset-0 z-[85] flex items-center justify-center bg-ink/50 p-4"><Card className="w-full max-w-md p-6 text-center shadow-pop fade-in"><div className="mb-3 text-3xl">{emoji}</div><div className="text-base font-bold text-ink">{title}</div><div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand transition-all" style={{width:pct+"%"}}/></div><div className="mt-2 truncate text-[12px] text-slate-400">{state.text||(pct+"%")}</div></Card></div>;}
+function ManualModal({req,queueCount,onSubmit,onCancel}){const[answer,setAnswer]=useState("");const[copied,setCopied]=useState(false);useEffect(()=>{setAnswer("");setCopied(false)},[req&&req.id]);if(!req)return null;const copy=async()=>{await copyText(req.promptText);setCopied(true);setTimeout(()=>setCopied(false),1500)};return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4"><Card className="flex max-h-[90vh] w-full max-w-2xl flex-col shadow-pop fade-in"><div className="flex items-center justify-between border-b border-hair px-5 py-4"><div><h3 className="text-base font-bold text-ink">✍️ 수동 모드</h3><p className="text-[13px] text-slate-400">{req.meta?.who?req.meta.who+" · ":""}복사 → 챗봇 → 답 붙여넣기</p></div>{queueCount>1&&<Chip>대기 {queueCount}</Chip>}</div><div className="flex-1 overflow-y-auto px-5 py-4"><div className="mb-2 flex gap-2"><Btn size="sm" onClick={copy}>{copied?"✓ 복사됨":"📋 복사"}</Btn><Btn size="sm" variant="outline" onClick={()=>{copy();window.open("https://chatgpt.com/","_blank")}}>↗ ChatGPT</Btn></div><pre className="max-h-44 overflow-y-auto whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{req.promptText}</pre><textarea value={answer} onChange={e=>setAnswer(e.target.value)} rows={8} autoFocus className={cx(inputCls,"mt-3 resize-y")} placeholder="답변(JSON) 붙여넣기…"/></div><div className="flex justify-end gap-2 border-t border-hair px-5 py-3"><Btn variant="ghost" onClick={onCancel}>취소</Btn><Btn onClick={()=>onSubmit(answer)} disabled={!answer.trim()}>답변 사용</Btn></div></Card></div>;}
+const BACKENDS=[{id:"webllm",label:"🌐 브라우저 내장 AI",desc:"무료·WebGPU"},{id:"ollama",label:"🖥️ 로컬 Ollama",desc:"무료·대량 적합"},{id:"manual",label:"✍️ 수동/챗GPT",desc:"무료·복붙"},{id:"api",label:"☁️ Anthropic API",desc:"유료·빠름"}];
+function SettingsModal({settings,onSave,onClose}){const[draft,setDraft]=useState({backend:"manual",ollamaUrl:"http://127.0.0.1:11434",ollamaModel:"",webllmModel:WEBLLM_PREFERRED[0],model:MODELS[0].id,apiKey:"",...settings});const[testing,setTesting]=useState(false);const[tr,setTr]=useState(null);const[om,setOm]=useState([]);const[lo,setLo]=useState(false);const[wm,setWm]=useState([]);const[lw,setLw]=useState(false);const refreshO=useCallback(async()=>{setLo(true);setTr(null);try{const l=await ollamaListModels(draft.ollamaUrl);setOm(l);if(l.length&&!l.includes(draft.ollamaModel))setDraft(d=>({...d,ollamaModel:l[0]}));if(!l.length)setTr({ok:false,msg:"모델 없음 → ollama pull exaone3.5:7.8b"});}catch(e){setTr({ok:false,msg:"연결 실패 — start-ollama.bat"});setOm([]);}finally{setLo(false);}},[draft.ollamaUrl,draft.ollamaModel]);const refreshW=useCallback(async()=>{setLw(true);setTr(null);try{const l=await getWebLLMModels();setWm(l);if(l.length&&!l.includes(draft.webllmModel))setDraft(d=>({...d,webllmModel:WEBLLM_PREFERRED.find(x=>l.includes(x))||l[0]}));}catch(e){setTr({ok:false,msg:"목록 로드 실패"});}finally{setLw(false);}},[draft.webllmModel]);useEffect(()=>{if(draft.backend==="ollama")refreshO();if(draft.backend==="webllm")refreshW();/*eslint-disable-next-line*/},[draft.backend]);const test=async()=>{setTesting(true);setTr(null);try{if(draft.backend==="ollama"){const o=await callOllama({url:draft.ollamaUrl,model:draft.ollamaModel,messages:[{role:"user",content:"OK"}],maxTokens:10});setTr({ok:true,msg:"응답: "+(o||"").slice(0,20)});}else if(draft.backend==="webllm")setTr(hasWebGPU()?{ok:true,msg:"WebGPU ✓"}:{ok:false,msg:"WebGPU 미지원"});else if(draft.backend==="api"){await callClaude({apiKey:draft.apiKey,model:draft.model,maxTokens:16,messages:[{role:"user",content:"ping"}]});setTr({ok:true,msg:"연결 성공!"});}else setTr({ok:true,msg:"수동 모드 바로 사용 가능"});}catch(e){setTr({ok:false,msg:e.message});}finally{setTesting(false);}};return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={onClose}><Card className="max-h-[90vh] w-full max-w-lg overflow-y-auto p-6 shadow-pop fade-in"><div onClick={e=>e.stopPropagation()}><div className="mb-5 flex items-center justify-between"><h3 className="text-lg font-bold text-ink">설정 · AI 엔진</h3><button className="text-slate-400 hover:text-ink" onClick={onClose}>✕</button></div><div className="space-y-5"><div><div className="mb-2 text-sm font-semibold text-ink">AI 엔진 <span className="font-normal text-slate-400">(무료 우선 · 모든 탭 공유)</span></div><div className="grid grid-cols-2 gap-2">{BACKENDS.map(b=><button key={b.id} onClick={()=>{setDraft(d=>({...d,backend:b.id}));setTr(null);}} className={cx("rounded-xl border p-3 text-left transition",draft.backend===b.id?"border-brand bg-brand-light":"border-hair hover:border-slate-300")}><div className="text-[13px] font-bold text-ink">{b.label}</div></button>)}</div><p className="mt-2 text-[13px] text-slate-400">{(BACKENDS.find(b=>b.id===draft.backend)||{}).desc}</p></div>{draft.backend==="webllm"&&<div className="space-y-3 rounded-xl bg-slate-50 p-4"><div className="text-[13px] font-semibold">{hasWebGPU()?<span className="text-emerald-600">WebGPU ✓</span>:<span className="text-rose-600">WebGPU 미지원</span>}</div><Field label="모델"><div className="flex gap-2"><select value={draft.webllmModel} onChange={e=>setDraft({...draft,webllmModel:e.target.value})} className={cx(inputVisual,"min-w-0 flex-1")}>{(wm.length?wm:[draft.webllmModel]).map(m=><option key={m} value={m}>{m}</option>)}</select><Btn variant="outline" size="sm" onClick={refreshW} disabled={lw}>{lw?<Spinner size={14}/>:"↻"}</Btn></div></Field></div>}{draft.backend==="ollama"&&<div className="space-y-3 rounded-xl bg-slate-50 p-4"><Field label="주소"><input className={inputCls} value={draft.ollamaUrl} onChange={e=>setDraft({...draft,ollamaUrl:e.target.value.trim()})}/></Field><Field label="모델"><div className="flex gap-2"><select value={draft.ollamaModel} onChange={e=>setDraft({...draft,ollamaModel:e.target.value})} className={cx(inputVisual,"min-w-0 flex-1")}>{!om.length&&<option value="">— 없음 —</option>}{om.map(m=><option key={m} value={m}>{m}</option>)}</select><Btn variant="outline" size="sm" onClick={refreshO} disabled={lo}>{lo?<Spinner size={14}/>:"↻"}</Btn></div></Field></div>}{draft.backend==="api"&&<div className="space-y-3 rounded-xl bg-slate-50 p-4"><Field label="API 키"><input type="password" className={inputCls} value={draft.apiKey} placeholder="sk-ant-..." onChange={e=>setDraft({...draft,apiKey:e.target.value.trim()})}/></Field><Field label="모델"><select value={draft.model} onChange={e=>setDraft({...draft,model:e.target.value})} className={inputCls}>{MODELS.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select></Field></div>}<div className="flex items-center gap-3"><Btn variant="outline" size="sm" onClick={test} disabled={testing}>{testing?<Spinner size={14}/>:"🔌"} 연결 테스트</Btn>{tr&&<span className={cx("text-sm",tr.ok?"text-brand-hover":"text-rose-600")}>{tr.msg}</span>}</div></div><div className="mt-6 flex justify-end gap-2"><Btn variant="ghost" onClick={onClose}>취소</Btn><Btn onClick={()=>onSave(draft)}>저장</Btn></div></div></Card></div>;}
+
+/* ===== ① 피드백 분류 ===== */
+function FeedbackPanel({settings,openSettings,toast}){
+  const K="uxax_p5a3_v1";const sv=load(K,{});
+  const[fbText,setFbText]=useState(sv.fbText!=null?sv.fbText:(sv.fb||[]).join("\n"));const fb=fbText.split(/\n/).map(s=>s.trim()).filter(Boolean);const[items,setItems]=useState(sv.items||null);const[busy,setBusy]=useState(false);const[phase,setPhase]=useState("");const[prog,setProg]=useState(0);
+  useEffect(()=>{save(K,{fbText,items})},[fbText,items]);
+  const run=async()=>{if(!fb.length){toast("error","피드백을 입력하세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setItems(null);setProg(0);try{const rows=fb.map((t,i)=>({id:"f"+i,text:t}));const chunks=[];for(let i=0;i<rows.length;i+=25)chunks.push(rows.slice(i,i+25));const out=[];for(let ci=0;ci<chunks.length;ci++){setPhase(`분류 중… (${ci+1}/${chunks.length})`);setProg(ci/chunks.length);const resp=await runLLM(settings,{system:SYS,messages:[{role:"user",content:buildFeedbackPrompt(chunks[ci])}],maxTokens:2600,stream:false,meta:{who:`피드백 ${ci+1}/${chunks.length}`}});const p=parseJsonLoose(resp);const list=(p&&p.items)||[];const byId={};list.forEach(x=>{if(x&&x.id!=null)byId[String(x.id)]=x;});chunks[ci].forEach(r=>{const c=byId[r.id]||{};out.push({text:r.text,topic:S(c.topic),type:S(c.type)||"기타",sentiment:(c.sentiment==="pos"||c.sentiment==="neu"||c.sentiment==="neg")?c.sentiment:"neu",priority:+c.priority||3,urgent:!!c.urgent});});setItems([...out]);}setItems(out);setProg(1);setPhase("");toast("ok",`${out.length}건 분류 완료`);}catch(e){toast("error","실패: "+(e.message||e));setPhase("");}finally{setBusy(false);}};
+  const agg=useMemo(()=>{if(!items)return null;const sent={pos:0,neu:0,neg:0};const types={};items.forEach(it=>{sent[it.sentiment]=(sent[it.sentiment]||0)+1;types[it.type]=(types[it.type]||0)+1;});return{sent,types,total:items.length,urgent:items.filter(i=>i.urgent).length};},[items]);
+  const exportCsv=()=>{if(!items)return;download("feedback.csv",toCSV([["내용","주제","유형","감성","우선순위","즉시"],...items.map(r=>[r.text,r.topic,r.type,r.sentiment,r.priority,r.urgent?"Y":""])]),"text/csv;charset=utf-8");};
+  return <div className="space-y-6">
+    <Guide defaultOpen={!items}
+      what="여러 채널의 피드백을 주제·유형(버그/요청/칭찬/이탈/기타)·감성(긍/중/부)·우선순위(1~5)로 자동 분류하고, 즉시대응이 필요한 항목을 표시하며 유형 분포·감성 차트로 집계해 주는 도구입니다."
+      where="UX 5단계 ‘테스트’ ~ 6단계 ‘개선’. 설문 응답·CS·리뷰·인앱 피드백을 한 번에 분류·집계할 때 씁니다. 결과는 개선 백로그·대시보드로 연결됩니다."
+      why="피드백은 흩어져 들어와 ‘무엇이 많고 급한지’ 파악이 어렵습니다. 자동 분류·집계로 우선순위가 보이고, ‘즉시대응’ 표시로 놓치면 안 될 건을 빠르게 거를 수 있습니다."
+      inputs={[
+        {field:"피드백", desc:"분류할 피드백을 한 줄에 하나씩. 채널이 섞여도 됩니다.", ex:"‘결제가 자꾸 실패해요’ / ‘다크모드 추가해주세요’ / ‘배송이 빨라서 좋았어요’"},
+      ]}
+      steps={[
+        {t:"피드백 입력",d:"여러 채널 피드백을 한 줄에 하나씩 붙여넣습니다."},
+        {t:"분류 실행",d:"주제·유형·감성·우선순위로 배치 분류하고 즉시대응 항목을 표시합니다."},
+        {t:"검토·내보내기",d:"유형 분포·감성·즉시대응 건을 보고 CSV로 내보내 대시보드/백로그에 연결합니다."},
+      ]}
+      tips={[
+        "여기는 ‘1회성 분류·집계’에 적합 — 상시 운영 라우팅·백로그 누적은 ④ 운영 피드백 탭을 쓰세요.",
+        "대량이면 수동 모드는 배치마다 복붙해야 하니 Ollama·API 권장.",
+        "‘즉시대응(🔴)’ 항목은 버그·이탈 신호일 수 있으니 먼저 확인하세요.",
+      ]}/>
+    <Card className="p-6"><div className="mb-3 flex items-center gap-1"><StepHead n={1} title="피드백 입력" sub="한 줄 = 한 건" done={fb.length>0}/><HelpCue title="피드백 분류" faqs={FEEDBACK_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div><div className="mb-3"><Btn size="sm" variant="outline" onClick={()=>{setFbText(DEMO_FEEDBACK);setItems(null);toast("ok","예제 피드백 8건 — ‘분류 실행’을 눌러보세요");}}>▶ 예제로 해보기</Btn></div>
+      <WsPull onPick={t=>{setFbText(fbText?fbText+"\n"+t:t);setItems(null);}} label="📥 보관함에서 가져오기 (P1 VOC·리뷰 등)"/>
+      <textarea className={cx(inputCls,"resize-y")} rows={7} placeholder={"결제가 자꾸 실패해요\n다크모드 추가해주세요\n배송이 빨라서 좋았어요 ..."} value={fbText} onChange={e=>{setFbText(e.target.value);setItems(null);}}/>
+      <div className="mt-4 flex items-center gap-3"><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 분류 실행 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn>{fb.length>0&&<span className="text-[13px] text-slate-400">{fb.length}건</span>}</div>
+      {busy&&<div className="mt-4"><div className="mb-1 flex items-center gap-2 text-[14px] font-semibold text-brand-hover"><Spinner size={14}/>{phase}</div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand transition-all" style={{width:Math.round(prog*100)+"%"}}/></div></div>}
+    </Card>
+    {agg&&<Card className="p-6 fade-in"><div className="mb-4 flex items-center justify-between"><StepHead n={2} title="분류 결과" sub={`${agg.total}건 · 즉시대응 ${agg.urgent}건`} done={true}/><div className="flex gap-2"><WsSave title="피드백 분류 요약" getText={()=>agg?("# 피드백 분류 요약\n유형: "+Object.entries(agg.types).map(([t,c])=>t+" "+c).join(", ")+"\n감성 — 긍정 "+agg.sent.pos+"/중립 "+agg.sent.neu+"/부정 "+agg.sent.neg+"\n즉시대응 "+agg.urgent+"건"):""} toast={toast}/><Btn size="sm" variant="outline" onClick={exportCsv}>↧ CSV</Btn></div></div>
+      <div className="mb-4 grid gap-4 sm:grid-cols-2"><div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">유형 분포</div><div className="flex flex-wrap gap-1.5">{Object.entries(agg.types).sort((a,b)=>b[1]-a[1]).map(([t,c])=><Chip key={t}>{t} {c}</Chip>)}</div></div><div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">감성</div><div className="flex overflow-hidden rounded-xl">{[["pos","#10b981"],["neu","#94a3b8"],["neg","#f43f5e"]].map(([k,c])=>{const v=agg.sent[k]||0;const pct=agg.total?Math.round(v/agg.total*100):0;return <div key={k} className="flex h-9 items-center justify-center text-[12px] font-bold text-white" style={{width:pct+"%",background:c}}>{pct>8?pct+"%":""}</div>;})}</div></div></div>
+      <div className="max-h-96 overflow-y-auto rounded-xl border border-hair"><table className="w-full text-[13px]"><thead className="sticky top-0 bg-slate-50"><tr><th className="p-2 text-left">내용</th><th className="p-2">주제</th><th className="p-2">유형</th><th className="p-2">감성</th><th className="p-2">P</th></tr></thead><tbody>{items.map((r,i)=><tr key={i} className="border-t border-hair">{}<td className="p-2 text-slate-700">{r.urgent&&"🔴 "}{r.text}</td><td className="p-2 text-slate-500">{r.topic}</td><td className="p-2 text-center"><Chip>{r.type}</Chip></td><td className="p-2 text-center"><SentChip s={r.sentiment}/></td><td className="p-2 text-center font-bold">{r.priority}</td></tr>)}</tbody></table></div>
+    </Card>}
+    {agg&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ 분류 완료! 다음 단계 →</span>
+      <Btn size="sm" onClick={()=>{wsAdd("피드백 분류 요약","# 피드백 분류 요약\n유형: "+Object.entries(agg.types).map(([t,c])=>t+" "+c).join(", ")+"\n감성 — 긍정 "+agg.sent.pos+"/중립 "+agg.sent.neu+"/부정 "+agg.sent.neg+"\n즉시대응 "+agg.urgent+"건");toast("ok","보관함 저장 — ④ 운영 피드백 탭에서 백로그로 이어가세요");location.hash="ops";}}>📤 저장하고 ④ 운영 피드백으로 →</Btn>
+      <HelpCue title="분류 다음은?" faqs={[{q:"피드백 분류 다음은요?",a:"분류 결과를 ④ 운영 피드백에서 팀별 백로그로 누적하거나, 우선순위 높은 건은 P3 개선으로 보내요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+  </div>;
+}
+
+/* ===== ② A/B 해석 (통계 실계산) ===== */
+function AbPanel({settings,openSettings,toast}){
+  const K="uxax_p5a4_v1";const sv=load(K,{});
+  const[cA,setCA]=useState(sv.cA||"");const[nA,setNA]=useState(sv.nA||"");const[cB,setCB]=useState(sv.cB||"");const[nB,setNB]=useState(sv.nB||"");const[ctx,setCtx]=useState(sv.ctx||"");const[res,setRes]=useState(sv.res||null);const[busy,setBusy]=useState(false);
+  useEffect(()=>{save(K,{cA,nA,cB,nB,ctx,res})},[cA,nA,cB,nB,ctx,res]);
+  const stats=useMemo(()=>{const a=+cA,na=+nA,b=+cB,nb=+nB;if(!na||!nb||a>na||b>nb)return null;return abTest(a,na,b,nb);},[cA,nA,cB,nB]);
+  const run=async()=>{if(!stats){toast("error","전환수≤표본수, 표본>0으로 입력하세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setRes(null);try{const out=await runLLM(settings,{system:SYS,messages:[{role:"user",content:buildAbInterpretPrompt(stats,ctx)}],maxTokens:1500,stream:false,meta:{who:"A/B 해석"}});const p=parseJsonLoose(out);setRes(p&&typeof p==="object"?p:{raw:out});toast("ok","해석 완료");}catch(e){toast("error","실패: "+(e.message||e));}finally{setBusy(false);}};
+  return <div className="space-y-6">
+    <Guide defaultOpen={!res}
+      what="A/B 테스트의 전환수·표본수를 넣으면 브라우저가 2비율 z검정으로 전환율·차이·p값·95% 신뢰구간을 ‘정확히 계산’하고(AI 추측 아님), 그 결과를 AI가 비전문가용 요약 + 채택/보류/재실험 권고로 풀어 줍니다."
+      where="UX 5단계 ‘테스트’의 정량 검증. 두 디자인/카피 안을 실험한 뒤 ‘어느 쪽이 통계적으로 더 나은지’ 판단할 때 씁니다. 결론은 출시·반복 개선 결정으로 이어집니다."
+      why="A/B 해석은 통계 지식이 필요해 오판이 잦습니다(작은 차이를 ‘이겼다’고 착각 등). 통계는 코드로 정확히 계산하고 AI는 해설만 맡겨, 비전문가도 올바른 결론을 빠르게 내립니다."
+      inputs={[
+        {field:"변형 A (대조군)", desc:"기준 안의 전환수와 표본수(방문자수). 전환수 ≤ 표본수.", ex:"전환 320 / 표본 5000"},
+        {field:"변형 B (실험군)", desc:"새 안의 전환수와 표본수.", ex:"전환 372 / 표본 5000"},
+        {field:"맥락 (선택)", desc:"무엇을 실험했는지·기간. 해석·권고가 구체적이 됩니다.", ex:"안전결제 버튼 색상 A/B, 14일"},
+      ]}
+      steps={[
+        {t:"수치 입력",d:"A·B의 전환수/표본수를 넣으면 전환율·차이·신뢰구간이 즉시 계산됩니다."},
+        {t:"유의성 확인",d:"2비율 z검정으로 p값과 95% 신뢰구간을 정확히 계산합니다(브라우저 내 계산)."},
+        {t:"AI 해석",d:"계산된 통계를 비전문가용 3줄 요약 + 채택/보류/재실험 권고로 풀어 줍니다."},
+      ]}
+      tips={[
+        "p<0.05면 ‘통계적으로 유의’ — 우연으로 보기 어렵다는 뜻입니다.",
+        "표본이 작으면 유의해도 신중히. 충분한 기간·표본을 확보하세요.",
+        "전환율만 보지 말고 가드레일 지표(이탈·CS 문의 등)도 함께 확인해 부작용을 점검하세요.",
+      ]}/>
+    <Card className="p-6"><div className="mb-3 flex items-center gap-1"><StepHead n={1} title="A/B 데이터" done={!!res}/><HelpCue title="A/B 해석" faqs={AB_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div><div className="mb-3"><Btn size="sm" variant="outline" onClick={()=>{setCA(DEMO_AB.cA);setNA(DEMO_AB.nA);setCB(DEMO_AB.cB);setNB(DEMO_AB.nB);setCtx(DEMO_AB.ctx);setRes(null);toast("ok","예제 A/B 수치 — 통계가 자동 계산돼요. ‘AI 해석·권고’를 눌러보세요");}}>▶ 예제로 해보기</Btn></div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-hair p-4"><div className="mb-2 font-bold text-ink">변형 A (대조군)</div><div className="grid grid-cols-2 gap-2"><Field label="전환수"><input type="number" className={inputCls} value={cA} onChange={e=>setCA(e.target.value)} placeholder="320"/></Field><Field label="표본수"><input type="number" className={inputCls} value={nA} onChange={e=>setNA(e.target.value)} placeholder="5000"/></Field></div></div>
+        <div className="rounded-xl border border-hair p-4"><div className="mb-2 font-bold text-ink">변형 B (실험군)</div><div className="grid grid-cols-2 gap-2"><Field label="전환수"><input type="number" className={inputCls} value={cB} onChange={e=>setCB(e.target.value)} placeholder="372"/></Field><Field label="표본수"><input type="number" className={inputCls} value={nB} onChange={e=>setNB(e.target.value)} placeholder="5000"/></Field></div></div>
+      </div>
+      <Field label="맥락 (선택)"><input className={cx(inputCls,"mt-3")} value={ctx} onChange={e=>setCtx(e.target.value)} placeholder="예: 안전결제 버튼 색상 A/B, 14일"/></Field>
+      {stats&&<div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-4 text-center sm:grid-cols-4">
+        <div><div className="text-[12px] text-slate-400">A 전환율</div><div className="text-lg font-bold text-ink">{(stats.pA*100).toFixed(2)}%</div></div>
+        <div><div className="text-[12px] text-slate-400">B 전환율</div><div className="text-lg font-bold text-ink">{(stats.pB*100).toFixed(2)}%</div></div>
+        <div><div className="text-[12px] text-slate-400">상대 향상</div><div className={cx("text-lg font-bold",stats.lift>=0?"text-emerald-600":"text-rose-600")}>{(stats.relLift*100).toFixed(1)}%</div></div>
+        <div><div className="text-[12px] text-slate-400">p값</div><div className={cx("text-lg font-bold",stats.sig?"text-emerald-600":"text-amber-600")}>{stats.pval.toFixed(4)}</div></div>
+        <div className="col-span-2 sm:col-span-4 text-[12px] text-slate-500">95% 신뢰구간(차이): [{(stats.ci[0]*100).toFixed(2)}%p, {(stats.ci[1]*100).toFixed(2)}%p] · {stats.sig?<span className="font-bold text-emerald-600">통계적으로 유의함 (p&lt;0.05)</span>:<span className="font-bold text-amber-600">유의하지 않음</span>}</div>
+      </div>}
+      <div className="mt-4"><Btn size="lg" onClick={run} disabled={busy||!stats}>{busy?<Spinner size={16}/>:"✨"} AI 해석·권고 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn></div>
+    </Card>
+    {res&&<Card className="p-6 fade-in"><div className="mb-3 flex items-center justify-between"><StepHead n={2} title="해석·권고" done={true}/><WsSave title="A/B 해석" getText={()=>res&&!res.raw?("# A/B 테스트 해석\n"+S(res.summary)+"\n\n권고: "+S(res.recommendation)+(res.rationale?(" — "+S(res.rationale)):"")+(arr(res.caveats).length?("\n\n주의:\n"+arr(res.caveats).map(c=>"- "+S(c)).join("\n")):"")):""} toast={toast}/></div>
+      {res.raw?<pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre>:<div className="space-y-4">
+        {res.summary&&<p className="text-[15px] leading-relaxed text-ink">{S(res.summary)}</p>}
+        {res.recommendation&&<div className="flex items-center gap-2"><span className="text-[12px] font-bold uppercase text-slate-400">권고</span><Chip className={/채택/.test(S(res.recommendation))?"bg-emerald-50 text-emerald-600 ring-emerald-100":/재실험/.test(S(res.recommendation))?"bg-amber-50 text-amber-600 ring-amber-100":"bg-slate-100 text-slate-500 ring-slate-200/60"}>{S(res.recommendation)}</Chip>{res.rationale&&<span className="text-[13px] text-slate-500">{S(res.rationale)}</span>}</div>}
+        {!!arr(res.caveats).length&&<div className="rounded-xl bg-amber-50 p-3"><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-amber-700">주의·한계</div><ul className="ml-5 list-disc space-y-1 text-[13px] text-amber-800">{res.caveats.map((c,i)=><li key={i}>{S(c)}</li>)}</ul></div>}
+      </div>}
+    </Card>}
+    {res&&!res.raw&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ A/B 해석 완료! 다음 단계 →</span>
+      <Btn size="sm" onClick={()=>{wsAdd("A/B 해석","# A/B 테스트 해석\n"+S(res.summary)+"\n\n권고: "+S(res.recommendation));toast("ok","보관함 저장 — 개선 반복은 P3 우선순위로 이어가세요");location.href="./P3_아이디에이션스튜디오.html#priority";}}>📤 저장하고 P3 개선 반복으로 →</Btn>
+      <HelpCue title="A/B 다음은?" faqs={[{q:"A/B 결과 다음은요?",a:"채택이면 적용·확대, 보류·재실험이면 P3에서 다른 안을 다시 발산·우선순위해 실험 사이클을 돌려요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+  </div>;
+}
+
+/* ===== ③ 이상탐지 (z-score 실계산) ===== */
+function AnomalyPanel({settings,openSettings,toast}){
+  const K="uxax_p6a4_v1";const sv=load(K,{});
+  const[text,setText]=useState(sv.text||"");const[ctx,setCtx]=useState(sv.ctx||"");const[thr,setThr]=useState(sv.thr||2);const[det,setDet]=useState(null);const[res,setRes]=useState(sv.res||null);const[busy,setBusy]=useState(false);
+  useEffect(()=>{save(K,{text,ctx,thr,res})},[text,ctx,thr,res]);
+  const parseSeries=()=>text.split(/\n/).map(l=>l.trim()).filter(Boolean).map(l=>{const m=/^(.+?)[\s,\t]+([-\d.]+)\s*%?$/.exec(l);return m?{t:m[1].trim(),v:+m[2]}:null;}).filter(Boolean);
+  const compute=()=>{const s=parseSeries();if(s.length<3){toast("error","'날짜 값' 형식으로 3줄 이상");return;}const d=detectAnomalies(s,+thr);setDet(d);setRes(null);const an=d.points.filter(p=>p.anom);toast("ok",`이상치 ${an.length}건 탐지 (평균 ${d.mean.toFixed(2)}, σ ${d.sd.toFixed(2)})`);};
+  const explain=async()=>{if(!det){toast("error","먼저 이상치를 계산하세요");return;}const an=det.points.filter(p=>p.anom);if(!an.length){toast("info","이상치가 없어요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setRes(null);try{const out=await runLLM(settings,{system:SYS,messages:[{role:"user",content:buildAnomalyHypoPrompt(an,ctx)}],maxTokens:1800,stream:false,meta:{who:"이상 원인 가설"}});const p=parseJsonLoose(out);setRes((p&&p.items)||{raw:out});if(p&&p.items)setRes(p.items);toast("ok","가설 생성 완료");}catch(e){toast("error","실패: "+(e.message||e));}finally{setBusy(false);}};
+  const Chart=()=>{if(!det||!det.points.length)return null;const pts=det.points;const w=Math.max(360,pts.length*36),h=140,pad=24;const vs=pts.map(p=>p.v);const mn=Math.min(...vs),mx=Math.max(...vs),rng=(mx-mn)||1;const xy=pts.map((p,i)=>[pad+(pts.length>1?i*(w-2*pad)/(pts.length-1):0),h-pad-((p.v-mn)/rng)*(h-2*pad)]);const path=xy.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");const my=h-pad-((det.mean-mn)/rng)*(h-2*pad);return <svg width="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="rounded-xl border border-hair bg-white" style={{maxHeight:170}}><line x1={pad} y1={my} x2={w-pad} y2={my} stroke="#cbd5e1" strokeDasharray="4 4"/><path d={path} fill="none" stroke="#5e6ad2" strokeWidth="2"/>{xy.map((p,i)=><circle key={i} cx={p[0]} cy={p[1]} r={pts[i].anom?5:3} fill={pts[i].anom?"#f43f5e":"#5e6ad2"}/>)}</svg>;};
+  return <div className="space-y-6">
+    <Guide defaultOpen={!det}
+      what="지표 시계열을 넣으면 브라우저가 평균·표준편차로 각 지점의 z-score를 계산해 평소와 크게 벗어난 ‘이상치’를 자동 탐지(그래프에 빨갛게 표시)하고, 그 이상에 대해 AI가 가능한 원인 가설과 확인 방법을 제시하는 도구입니다."
+      where="UX 6단계 ‘개선(Iterate)’의 운영 모니터링. 출시 후 전환율·이탈률 같은 KPI가 갑자기 떨어지거나 튀는 지점을 조기에 잡을 때 씁니다. 발견은 원인 조사·핫픽스로 이어집니다."
+      why="대시보드 숫자를 매일 눈으로 보긴 어렵습니다. 통계적으로 ‘이건 평소와 다르다’를 자동으로 짚어주면 문제를 빨리 인지하고, AI 가설로 조사 방향을 빠르게 잡습니다."
+      inputs={[
+        {field:"지표 시계열", desc:"‘날짜(또는 라벨)  값’을 한 줄에 하나. %·단위는 빼고 숫자만이 깔끔합니다.", ex:"2026-06-01  3.2 / 2026-06-02  3.1 / 2026-06-04  1.4"},
+        {field:"임계값 (σ)", desc:"평균에서 몇 표준편차 벗어나면 이상으로 볼지. 기본 2(민감), 3은 더 보수적.", ex:"2"},
+        {field:"맥락 (선택)", desc:"무슨 지표인지. AI 원인 가설이 구체적이 됩니다.", ex:"일일 결제 전환율(%)"},
+      ]}
+      steps={[
+        {t:"지표 붙여넣기",d:"‘날짜  값’ 형식으로 줄마다 입력합니다."},
+        {t:"이상치 계산",d:"브라우저가 z-score를 계산하고 임계값(기본 2σ)을 넘는 지점을 빨갛게 표시합니다."},
+        {t:"원인 가설",d:"탐지된 이상에 대해 AI가 가능한 원인 가설과 확인 방법을 제시합니다."},
+      ]}
+      tips={[
+        "z-score 기반 ‘단순’ 탐지입니다 — 요일/계절성·장기 추세가 강하면 별도 검토가 필요해요.",
+        "탐지(계산)는 브라우저에서 정확히 수행되고, AI는 ‘원인 가설’에만 씁니다.",
+        "이상이 진짜인지(데이터 오류·이벤트 영향)부터 확인하고 대응 우선순위를 정하세요.",
+      ]}/>
+    <Card className="p-6"><div className="mb-3 flex items-center gap-1"><StepHead n={1} title="지표 입력 & 탐지" done={!!det}/><HelpCue title="이상탐지" faqs={ANOMALY_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div><div className="mb-3"><Btn size="sm" variant="outline" onClick={()=>{setText(DEMO_ANOMALY.text);setCtx(DEMO_ANOMALY.ctx);setRes(null);toast("ok","예제 시계열 — ‘이상치 계산’을 눌러보세요");}}>▶ 예제로 해보기</Btn></div>
+      <div className="grid gap-3 sm:grid-cols-3"><div className="sm:col-span-2"><Field label="지표 시계열"><textarea className={cx(inputCls,"resize-y")} rows={7} value={text} onChange={e=>setText(e.target.value)} placeholder={"2026-06-01  3.2\n2026-06-02  3.1\n2026-06-03  3.3\n2026-06-04  1.4\n2026-06-05  3.2"}/></Field></div><div className="space-y-3"><Field label="임계값 (σ)"><input type="number" step="0.5" min="1" max="4" className={inputCls} value={thr} onChange={e=>setThr(Math.max(1,Math.min(4,+e.target.value||2)))}/></Field><Field label="맥락 (선택)"><input className={inputCls} value={ctx} onChange={e=>setCtx(e.target.value)} placeholder="예: 일일 전환율(%)"/></Field><Btn className="w-full" onClick={compute}>🔍 이상치 계산</Btn></div></div>
+    </Card>
+    {det&&<Card className="p-6 fade-in"><div className="mb-3 flex items-center justify-between"><StepHead n={2} title="탐지 결과" sub={`평균 ${det.mean.toFixed(2)} · σ ${det.sd.toFixed(2)} · 이상 ${det.points.filter(p=>p.anom).length}건`} done={true}/><Btn size="sm" variant="outline" onClick={explain} disabled={busy}>{busy?<Spinner size={14}/>:"✨"} AI 원인 가설</Btn></div>
+      <Chart/>
+      <div className="mt-3 flex flex-wrap gap-1.5">{det.points.filter(p=>p.anom).map((p,i)=><Chip key={i} className="bg-rose-50 text-rose-600 ring-rose-100">{p.t}: {p.v} (z={p.z.toFixed(1)})</Chip>)}{!det.points.some(p=>p.anom)&&<span className="text-[13px] text-slate-400">임계값 내 — 이상치 없음</span>}</div>
+      {res&&(Array.isArray(res)?<div className="mt-4 space-y-2">{res.map((x,i)=><Card key={i} className="p-3"><div className="font-semibold text-ink">{S(x.when)} · {S(x.value)} <span className="text-[12px] text-slate-400">z={S(x.z)}</span></div><ul className="ml-4 mt-1 list-disc text-[13px] text-slate-600">{arr(x.hypotheses).map((h,j)=><li key={j}>{S(h)}</li>)}</ul>{x.check&&<div className="mt-1 text-[13px] text-brand-hover">↳ 확인: {S(x.check)}</div>}</Card>)}</div>:<pre className="mt-4 whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre>)}
+    </Card>}
+    {det&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ 탐지 완료! 다음 단계 →</span>
+      <Btn size="sm" onClick={()=>{wsAdd("이상탐지 결과","# 이상탐지\n평균 "+det.mean.toFixed(2)+" · σ "+det.sd.toFixed(2)+"\n이상치: "+det.points.filter(p=>p.anom).map(p=>p.t+"="+p.v+"(z"+p.z.toFixed(1)+")").join(", "));toast("ok","보관함 저장 — 원인 개선은 P3 우선순위로 이어가세요");location.href="./P3_아이디에이션스튜디오.html#priority";}}>📤 저장하고 P3 개선으로 →</Btn>
+      <HelpCue title="이상 다음은?" faqs={[{q:"이상치 다음은요?",a:"원인을 조사해 핫픽스하거나, 개선이 필요하면 P3에서 해결 아이디어를 발산·우선순위해요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+  </div>;
+}
+
+/* ===== ④ 운영 피드백 ===== */
+function OpsPanel({settings,openSettings,toast}){
+  const K="uxax_p6a5_v1";const sv=load(K,{});
+  const[fbText,setFbText]=useState(sv.fbText!=null?sv.fbText:(sv.fb||[]).join("\n"));const fb=fbText.split(/\n/).map(s=>s.trim()).filter(Boolean);const[res,setRes]=useState(sv.res||null);const[busy,setBusy]=useState(false);
+  useEffect(()=>{save(K,{fbText,res})},[fbText,res]);
+  const run=async()=>{if(!fb.length){toast("error","피드백을 입력하세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setRes(null);try{const out=await runLLM(settings,{system:SYS,messages:[{role:"user",content:buildOpsPrompt(fb.slice(0,60))}],maxTokens:2400,stream:false,meta:{who:"운영 피드백 분류"}});const p=parseJsonLoose(out);setRes(p&&typeof p==="object"?p:{raw:out});toast("ok","운영 분류 완료");}catch(e){toast("error","실패: "+(e.message||e));}finally{setBusy(false);}};
+  const exportJson=()=>{if(!res)return;download("ops_backlog.json",JSON.stringify(res,null,2),"application/json");};
+  return <div className="space-y-6">
+    <Guide defaultOpen={!res}
+      what="출시 후 상시 유입되는 운영 피드백을 주제·담당팀(제품/디자인/CS/개발)으로 분류·라우팅하고, 중복을 병합해 빈도를 집계하며, 급증 토픽을 표시하고 개선 백로그(제목·설명·우선순위)를 만들어 JSON으로 내보내는 도구입니다."
+      where="UX 6단계 ‘개선(Iterate)’의 지속 운영. 출시 이후 들어오는 목소리를 ‘담당팀에 자동 분배 + 백로그 누적’해 개선 사이클을 계속 돌립니다. 백로그는 이슈트래커로 연결됩니다."
+      why="운영 피드백은 끊임없이 들어와 방치되기 쉽습니다. 자동 분류·라우팅·백로그화로 ‘누가 무엇을 해야 하는지’가 정리되고, 급증 토픽으로 새로 터진 문제를 빨리 감지합니다."
+      inputs={[
+        {field:"운영 피드백 스트림", desc:"기간/채널의 피드백을 한 줄에 하나씩(앱 마켓·CS·인앱 등). 최대 60건까지 한 번에 처리.", ex:"‘앱이 자꾸 튕겨요(안드로이드)’ / ‘검색 필터 추가 요청’ / ‘안전결제 한도 문의’"},
+      ]}
+      steps={[
+        {t:"피드백 스트림 입력",d:"기간/채널의 피드백을 붙여넣습니다."},
+        {t:"분류·라우팅 실행",d:"주제·담당팀으로 라우팅하고 중복을 병합, 급증 토픽을 표시합니다."},
+        {t:"백로그 생성",d:"개선 백로그(제목·설명·우선순위)를 만들어 JSON으로 내보내 이슈트래커에 연결합니다."},
+      ]}
+      tips={[
+        "① 피드백 분류가 ‘1회성 집계’라면, 여기는 팀 라우팅·백로그 누적 등 ‘지속 운영’에 맞춰져 있어요.",
+        "‘급증 토픽’은 최근 갑자기 늘어난 주제 — 새 버그/이슈의 신호일 수 있습니다.",
+        "백로그 JSON을 정기적으로 내보내 이슈트래커(Jira 등)에 반영하면 개선 사이클이 끊기지 않습니다.",
+      ]}/>
+    <Card className="p-6"><div className="mb-3 flex items-center gap-1"><StepHead n={1} title="운영 피드백 입력" sub="한 줄 = 한 건" done={!!res}/><HelpCue title="운영 피드백 분류" faqs={OPS_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div><div className="mb-3"><Btn size="sm" variant="outline" onClick={()=>{setFbText(DEMO_OPS);setRes(null);toast("ok","예제 운영 피드백 8건 — ‘분류·라우팅’을 눌러보세요");}}>▶ 예제로 해보기</Btn></div>
+      <WsPull onPick={t=>{setFbText(fbText?fbText+"\n"+t:t);setRes(null);}} label="📥 보관함에서 가져오기 (VOC·피드백 등)"/>
+      <textarea className={cx(inputCls,"resize-y")} rows={7} placeholder={"앱이 자꾸 튕겨요 (안드로이드)\n검색 필터 추가 요청\n안전결제 한도 문의 ..."} value={fbText} onChange={e=>{setFbText(e.target.value);setRes(null);}}/>
+      <div className="mt-4 flex items-center gap-3"><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 분류·라우팅 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn>{fb.length>0&&<span className="text-[13px] text-slate-400">{fb.length}건{fb.length>60?" · 60건까지 처리":""}</span>}</div>
+    </Card>
+    {res&&<Card className="p-6 fade-in"><div className="mb-4 flex items-center justify-between"><StepHead n={2} title="라우팅·백로그" done={true}/>{!res.raw&&<div className="flex gap-2"><WsSave title="운영 백로그" getText={()=>res&&!res.raw?("# 운영 피드백 분류\n## 라우팅\n"+arr(res.routed).map(r=>"- "+S(r.topic)+" → "+S(r.team)+" ("+(r.count||0)+")").join("\n")+"\n\n## 백로그\n"+arr(res.backlog).map(b=>"- [P"+b.priority+"] "+S(b.title)+": "+S(b.desc)).join("\n")+(arr(res.trending).length?("\n\n급증 토픽: "+arr(res.trending).map(S).join(", ")):"")):""} toast={toast}/><Btn size="sm" variant="outline" onClick={exportJson}>↧ JSON</Btn></div>}</div>
+      {res.raw?<pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre>:<div className="space-y-5">
+        {!!arr(res.trending).length&&<div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">급증 토픽</div><div className="flex flex-wrap gap-1.5">{res.trending.map((t,i)=><Chip key={i} className="bg-amber-50 text-amber-700 ring-amber-100">🔥 {S(t)}</Chip>)}</div></div>}
+        {!!arr(res.routed).length&&<div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">팀 라우팅</div><div className="overflow-x-auto"><table className="w-full text-[13px]"><thead className="bg-slate-50"><tr><th className="p-2 text-left">주제</th><th className="p-2">담당팀</th><th className="p-2">건수</th></tr></thead><tbody>{res.routed.map((r,i)=><tr key={i} className="border-t border-hair"><td className="p-2 text-ink">{S(r.topic)}</td><td className="p-2 text-center"><Chip>{S(r.team)}</Chip></td><td className="p-2 text-center">{r.count}</td></tr>)}</tbody></table></div></div>}
+        {!!arr(res.backlog).length&&<div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">개선 백로그</div><div className="space-y-2">{res.backlog.map((b,i)=><Card key={i} className="flex items-start justify-between gap-3 p-3"><div><div className="font-semibold text-ink">{S(b.title)}</div><div className="text-[13px] text-slate-500">{S(b.desc)}</div></div><Chip>P{b.priority}</Chip></Card>)}</div></div>}
+      </div>}
+    </Card>}
+    {res&&!res.raw&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ 운영 분류 완료! 🔄 개선 사이클 →</span>
+      <Btn size="sm" onClick={()=>{wsAdd("운영 백로그","# 운영 피드백 분류\n## 라우팅\n"+arr(res.routed).map(r=>"- "+S(r.topic)+" → "+S(r.team)+" ("+(r.count||0)+")").join("\n")+"\n\n## 백로그\n"+arr(res.backlog).map(b=>"- [P"+b.priority+"] "+S(b.title)+": "+S(b.desc)).join("\n"));toast("ok","보관함 저장 — 백로그를 P3 아이디에이션으로 보내 개선 사이클을 다시 돌리세요");location.href="./P3_아이디에이션스튜디오.html#idea";}}>📤 저장하고 P3로 (개선 순환) →</Btn>
+      <HelpCue title="운영 다음은?" faqs={[{q:"운영 피드백 다음은요?",a:"백로그를 이슈트래커에 반영하고, 개선이 필요한 건 P3 아이디에이션으로 보내 프로세스를 처음부터 다시 돌려요. UX는 한 번 끝이 아니라 계속 순환해요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+  </div>;
+}
+
+/* ===== Root ===== */
+const TABS=[{id:"feedback",label:"① 피드백 분류",pid:"P5-A3"},{id:"ab",label:"② A/B 해석",pid:"P5-A4"},{id:"anomaly",label:"③ 이상탐지",pid:"P6-A4"},{id:"ops",label:"④ 운영 피드백",pid:"P6-A5"}];
+function App(){
+  const[settings,setSettings]=useState(()=>{const s=load(SETTINGS_KEY,null);const fc=(window.UXAX_CONFIG&&window.UXAX_CONFIG.anthropicApiKey)||"";const def={backend:fc?"api":"manual",apiKey:fc,model:MODELS[0].id,ollamaUrl:"http://127.0.0.1:11434",ollamaModel:"",webllmModel:WEBLLM_PREFERRED[0]};return s?{...def,...s}:def;});
+  const[tab,setTab]=useState(()=>{const h=(location.hash||"").replace("#","");return TABS.find(t=>t.id===h)?h:"feedback";});
+  const[showSettings,setShowSettings]=useState(false);const[toast,setToastState]=useState(null);const[,force]=useState(0);
+  const ready=backendReady(settings);
+  useEffect(()=>{save(SETTINGS_KEY,settings)},[settings]);useEffect(()=>{location.hash=tab},[tab]);useEffect(()=>{const h=()=>{const x=(location.hash||"").replace("#","");if(TABS.find(t=>t.id===x))setTab(x);};window.addEventListener("hashchange",h);return()=>window.removeEventListener("hashchange",h);},[]);
+  useEffect(()=>{const f=()=>force(n=>n+1);manualBridge.notify=f;webllmLoader.notify=f;return()=>{manualBridge.notify=null;webllmLoader.notify=null;};},[]);
+  const toastFn=useCallback((t,m)=>{setToastState({type:t,msg:m});setTimeout(()=>setToastState(null),3400)},[]);
+  useEffect(()=>{if(settings.backendChosen||settings.backend!=="manual")return;(async()=>{try{const l=await ollamaListModels(settings.ollamaUrl,1500);if(l.length){setSettings(s=>({...s,backend:"ollama",ollamaModel:l[0]}));toastFn("ok","로컬 Ollama 자동 연결");}}catch(e){}})();/*eslint-disable-next-line*/},[]);
+  const openSettings=()=>setShowSettings(true);
+  return <div className="min-h-screen">
+    <header className="sticky top-0 z-40 border-b border-hair bg-canvas/85 backdrop-blur-md">
+      <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-5 py-3"><a href="./index.html" className="rounded-[10px] px-2 py-1.5 text-sm text-slate-500 hover:bg-slate-100">← 홈</a><div className="flex items-center gap-2.5"><div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-brand text-base font-black text-white">📊</div><div><div className="text-[16px] font-extrabold leading-none tracking-tight text-ink">피드백·운영 분석 스튜디오</div><div className="text-[11px] text-slate-400">피드백·A/B·이상탐지·운영 · 무료</div></div></div><div className="flex-1"/><button onClick={openSettings} className={cx("hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1 ring-inset sm:inline-flex",ready?"bg-emerald-50 text-emerald-600 ring-emerald-100":"bg-amber-50 text-amber-600 ring-amber-100")}><span className={cx("h-1.5 w-1.5 rounded-full",ready?"bg-emerald-500":"bg-amber-500")}/>{backendLabel(settings)}</button><button onClick={openSettings} className="rounded-[10px] p-2 text-slate-500 hover:bg-slate-100" title="설정">⚙</button></div>
+      <ProcessNav current={CURRENT_PHASE}/>
+      <div className="mx-auto max-w-[1100px] overflow-x-auto px-3"><nav className="flex gap-1">{TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} className={cx("flex items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition",tab===t.id?"border-brand text-brand-hover":"border-transparent text-slate-500 hover:text-ink")}>{t.label}<span className="text-[11px] text-slate-400">{t.pid}</span></button>)}</nav></div>
+    </header>
+    <main className="mx-auto max-w-[1100px] px-5 py-7">
+      <div className={tab==="feedback"?"":"hidden"}><FeedbackPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+      <div className={tab==="ab"?"":"hidden"}><AbPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+      <div className={tab==="anomaly"?"":"hidden"}><AnomalyPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+      <div className={tab==="ops"?"":"hidden"}><OpsPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+    </main>
+    {showSettings&&<SettingsModal settings={settings} onSave={(s)=>{setSettings({...s,backendChosen:true});setShowSettings(false);toastFn("ok","설정 저장됨");}} onClose={()=>setShowSettings(false)}/>}
+    <ManualModal req={manualBridge.current()} queueCount={manualBridge.count()} onSubmit={(t)=>manualBridge.resolveCurrent(t)} onCancel={()=>manualBridge.rejectCurrent()}/>
+    <ProgressOverlay state={webllmLoader} title="브라우저 내장 AI 준비 중" emoji="🌐"/>
+    <WorkspaceFab toast={toastFn}/>
+    <Toast toast={toast}/>
+  </div>;
+}
+window.addEventListener("error",(e)=>{const root=document.getElementById("root");if(root&&(!root.firstElementChild||root.dataset.errored)){if(root.dataset.errored)return;root.dataset.errored="1";root.innerHTML='<div style="padding:24px;font-family:Pretendard,system-ui,sans-serif;color:#b91c1c"><h2 style="font-weight:700;margin-bottom:8px">초기화 오류</h2><pre style="white-space:pre-wrap;color:#54576a">'+(e.message||e.error||"알 수 없는 오류")+'</pre></div>';}});
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

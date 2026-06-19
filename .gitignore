@@ -1,0 +1,21 @@
+# Local secrets
+config.js
+.env
+.env.*
+*.local
+
+# Dependencies / caches
+node_modules/
+*.tsbuildinfo
+.cache/
+
+# Local editor / agent runtime
+.vscode/
+.claude/
+logs/
+
+# Temporary Playwright probes and screenshots
+_pw_*.mjs
+_p*.png
+*.log
+*.tmp

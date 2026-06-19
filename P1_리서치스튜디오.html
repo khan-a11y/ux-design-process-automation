@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>P1 · 리서치 스튜디오 (전사·설문코딩·VOC)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>/* JSX를 classic runtime(React.createElement)으로 강제 — automatic runtime이 넣는 import문이 file://(비모듈)에서 깨지는 것 방지 */try{Babel.registerPreset("uxax-react",{presets:[[Babel.availablePresets["react"],{runtime:"classic"}]]});}catch(e){}</script>
+<script>
+  tailwind.config={theme:{extend:{
+    colors:{brand:{DEFAULT:'#5e6ad2',hover:'#4f5bd5',light:'#eef0fb',faint:'#f6f7fd'},ink:{DEFAULT:'#16161a'},canvas:'#fbfbfd',hair:'#e9e9ef'},
+    fontFamily:{sans:['Pretendard','Pretendard Variable','-apple-system','system-ui','sans-serif']},
+    boxShadow:{soft:'0 1px 2px rgba(16,16,26,.04), 0 4px 16px rgba(16,16,26,.06)',pop:'0 8px 40px rgba(16,16,26,.16)'},
+    letterSpacing:{tighter2:'-0.02em'},
+  }}};
+</script>
+<style>
+  html{font-size:16px}body{background:#fbfbfd;color:#16161a;-webkit-font-smoothing:antialiased;zoom:1.2}
+  ::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:#d7d7e0;border-radius:8px;border:3px solid #fbfbfd}
+  .fade-in{animation:fadeIn .22s ease both}@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}@keyframes spin{to{transform:rotate(360deg)}}
+  .seg:hover{background:#f6f7fd}
+</style>
+</head>
+<body>
+<div id="root">
+  <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Pretendard,system-ui,sans-serif;color:#54576a;flex-direction:column;gap:14px">
+    <div style="width:40px;height:40px;border:3px solid #e9e9ef;border-top-color:#5e6ad2;border-radius:50%;animation:spin 1s linear infinite"></div>
+    <div style="font-size:15px">리서치 스튜디오를 불러오는 중…</div>
+  </div>
+</div>
+<script>window.UXAX_CONFIG=window.UXAX_CONFIG||{};</script>
+<script src="config.js" onerror="void 0"></script>
+<script src="common.js"></script>
+<script type="text/babel" data-presets="uxax-react">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+/* ============================================================
+   공통 상수/유틸 (엔진 설정은 모든 도구가 공유)
+   ============================================================ */
+const SETTINGS_KEY="uxax_studio_settings_v1";
+const MODELS=[{id:"claude-opus-4-8",label:"Claude Opus 4.8 · 최고 품질"},{id:"claude-sonnet-4-6",label:"Claude Sonnet 4.6 · 균형"},{id:"claude-haiku-4-5",label:"Claude Haiku 4.5 · 빠름"}];
+const cx=(...a)=>a.filter(Boolean).join(" ");
+const S=(v)=>v==null?"":Array.isArray(v)?v.map(S).join(", "):(typeof v==="object"?(v.text||v.name||JSON.stringify(v)):String(v));
+const arr=(v)=>Array.isArray(v)?v:(v==null?[]:[v]);
+const uid=(p="x")=>p+"_"+Math.random().toString(36).slice(2,9);
+function load(k,fb){try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb}catch(e){return fb}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){__uxaxSaveWarn();return false}}
+function __uxaxSaveWarn(){try{if(document.getElementById("uxax-savewarn"))return;var b=document.createElement("div");b.id="uxax-savewarn";b.style.cssText="position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#b91c1c;color:#fff;font:600 13px Pretendard,system-ui,sans-serif;padding:10px 16px;text-align:center;box-shadow:0 -4px 16px rgba(0,0,0,.18)";b.innerHTML="⚠ 저장 공간이 가득 차 자동 저장에 실패했습니다. 지금 결과를 <b>내보내기(MD/CSV/JSON)</b>로 백업하세요 — 새로고침하면 사라질 수 있습니다. <span style=\"text-decoration:underline;cursor:pointer\" onclick=\"this.parentNode.remove()\">닫기</span>";document.body.appendChild(b);}catch(e){}}
+function fmtTime(s){if(s==null||isNaN(s))return "";s=Math.max(0,Math.floor(s));const m=Math.floor(s/60),ss=s%60;return String(m).padStart(2,"0")+":"+String(ss).padStart(2,"0");}
+function parseTime(t){if(typeof t==="number")return t;const m=/^(\d+):(\d+)$/.exec(String(t||"").trim());return m?(+m[1]*60+ +m[2]):null;}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy")}catch(e2){}document.body.removeChild(ta);return true}}
+function download(fn,text,type="text/plain;charset=utf-8"){const b=new Blob(["﻿"+text],{type});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(u)},100);}
+/* ===== 공유 워크스페이스(보관함) — 도구·앱 간 산출물 전달 ===== */
+const WS_KEY="uxax_workspace_v1";const wsBus={notify:null};
+function wsLoad(){return load(WS_KEY,[]);}
+function wsAdd(title,text){if(!text||!String(text).trim())return false;const a=wsLoad();a.unshift({id:uid("ws"),title:title||"산출물",text:String(text),at:new Date().toLocaleString("ko-KR")});const ok=save(WS_KEY,a.slice(0,300));if(wsBus.notify)wsBus.notify();return ok;}
+function wsDel(id){save(WS_KEY,wsLoad().filter(x=>x.id!==id));if(wsBus.notify)wsBus.notify();}
+function wsClear(){save(WS_KEY,[]);if(wsBus.notify)wsBus.notify();}
+function wsUpdate(id,text){const a=wsLoad().map(x=>x.id===id?{...x,text:String(text)}:x);save(WS_KEY,a);if(wsBus.notify)wsBus.notify();}
+function _tryParse(s){try{return JSON.parse(s)}catch(e){}const c=s.replace(/\/\*[\s\S]*?\*\//g,"").replace(/^\s*\/\/.*$/gm,"").replace(/,(\s*[}\]])/g,"$1");try{return JSON.parse(c)}catch(e){}return undefined}
+function parseJsonLoose(text){if(!text)return null;let t=String(text).trim();const f=t.match(/```(?:json)?\s*([\s\S]*?)```/i);if(f)t=f[1].trim();let r=_tryParse(t);if(r!==undefined)return r;const a=t.indexOf("["),o=t.indexOf("{");const st=a===-1?o:o===-1?a:Math.min(a,o);if(st===-1)return null;const op=t[st],cl=op==="["?"]":"}";let d=0,ins=false,esc=false;for(let i=st;i<t.length;i++){const c=t[i];if(ins){if(esc)esc=false;else if(c==="\\")esc=true;else if(c==='"')ins=false;}else{if(c==='"')ins=true;else if(c===op)d++;else if(c===cl){d--;if(!d){const r2=_tryParse(t.slice(st,i+1));if(r2!==undefined)return r2;}}}}const r3=_tryParse(t.slice(st));return r3===undefined?null:r3;}
+function parseCSV(text){const rows=[];let row=[],cur="",ins=false;for(let i=0;i<text.length;i++){const c=text[i];if(ins){if(c==='"'){if(text[i+1]==='"'){cur+='"';i++;}else ins=false;}else cur+=c;}else{if(c==='"')ins=true;else if(c===','){row.push(cur);cur="";}else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur="";}else if(c==='\r'){}else cur+=c;}}if(cur!==""||row.length){row.push(cur);rows.push(row);}return rows.filter(r=>r.length&&!(r.length===1&&r[0].trim()===""));}
+function toCSV(rows){return rows.map(r=>r.map(c=>{const s=S(c);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(",")).join("\n");}
+/* ===== P0 프로젝트 정의(브리프) 연동 — index.html P0가 저장한 정의를 리서치 맥락으로 ===== */
+const PB_KEY="uxax_project_brief_v1";
+function loadBrief(){try{const b=JSON.parse(localStorage.getItem(PB_KEY));if(b&&b.data&&Object.keys(b.data).length)return b;}catch(e){}return null;}
+function briefName(b){return (b&&b.data&&b.data.name)||"프로젝트 정의";}
+function briefToContext(b){if(!b||!b.data)return "";const d=b.data;const p=[];if(d.oneline)p.push(d.oneline.trim());else if(d.name)p.push(d.name.trim());if(d.users)p.push("대상: "+d.users.trim());if(d.problem)p.push("배경: "+d.problem.trim());if(d.hypothesis)p.push("가설: "+d.hypothesis.trim());if(d.current)p.push("현재 문제: "+d.current.trim());if(d.scope)p.push("변경 범위: "+d.scope.trim());if(d.success)p.push("성공 기준: "+d.success.trim());return p.join(" / ");}
+
+/* ============================================================
+   LLM 엔진 (수동/Ollama/WebLLM/API)
+   ============================================================ */
+const API_URL="https://api.anthropic.com/v1/messages";
+async function callClaude({apiKey,model,system,messages,maxTokens=4096,stream=false,onDelta,signal}){if(!apiKey){const e=new Error("API 키가 없습니다");e.code="NO_KEY";throw e;}const body={model,max_tokens:maxTokens,messages};if(system)body.system=system;if(stream)body.stream=true;const res=await fetch(API_URL,{method:"POST",headers:{"content-type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body),signal});if(!res.ok){let d="";try{const j=await res.json();d=j.error?.message||JSON.stringify(j)}catch(e){try{d=await res.text()}catch(e2){}}const err=new Error("API "+res.status+(d?" · "+d:""));err.status=res.status;throw err;}if(!stream){const data=await res.json();return (data.content||[]).map(b=>b.text||"").join("");}const rd=res.body.getReader();const dec=new TextDecoder();let buf="",full="";while(true){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;while((i=buf.indexOf("\n\n"))>=0){const blk=buf.slice(0,i);buf=buf.slice(i+2);const ln=blk.split("\n").find(l=>l.startsWith("data:"));if(!ln)continue;const p=ln.slice(5).trim();if(!p||p==="[DONE]")continue;try{const evt=JSON.parse(p);if(evt.type==="content_block_delta"&&evt.delta?.type==="text_delta"){full+=evt.delta.text;onDelta&&onDelta(full,evt.delta.text);}}catch(e){}}}return full;}
+async function ollamaListModels(url,timeoutMs=3000){const base=(url||"http://127.0.0.1:11434").replace(/\/$/,"");const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),timeoutMs);try{const res=await fetch(base+"/api/tags",{signal:ctrl.signal});if(!res.ok)throw new Error("Ollama "+res.status);const d=await res.json();return (d.models||[]).map(m=>m.name);}finally{clearTimeout(t);}}
+async function callOllama({url,model,system,messages,maxTokens=2000,stream=false,onDelta,signal}){const base=(url||"http://127.0.0.1:11434").replace(/\/$/,"");const msgs=[];if(system)msgs.push({role:"system",content:system});for(const m of messages)msgs.push({role:m.role,content:m.content});const res=await fetch(base+"/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({model,messages:msgs,stream:!!stream,options:{num_predict:maxTokens,num_ctx:8192}}),signal});if(!res.ok){let d="";try{d=(await res.json()).error||""}catch(e){}throw new Error("Ollama "+res.status+(d?" · "+d:""));}if(!stream){const data=await res.json();return (data.message&&data.message.content)||"";}const rd=res.body.getReader();const dec=new TextDecoder();let buf="",full="";while(true){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let nl;while((nl=buf.indexOf("\n"))>=0){const ln=buf.slice(0,nl).trim();buf=buf.slice(nl+1);if(!ln)continue;try{const evt=JSON.parse(ln);if(evt.message?.content){full+=evt.message.content;onDelta&&onDelta(full,evt.message.content);}}catch(e){}}}return full;}
+const WEBLLM_PREFERRED=["Qwen2.5-3B-Instruct-q4f16_1-MLC","Qwen2.5-7B-Instruct-q4f16_1-MLC","Llama-3.2-3B-Instruct-q4f16_1-MLC"];
+const webllmState={lib:null,engine:null,modelId:null};const webllmLoader={active:false,progress:0,text:"",notify:null,set(a,p,t){this.active=a;this.progress=p;this.text=t;this.notify&&this.notify();}};
+function hasWebGPU(){return typeof navigator!=="undefined"&&!!navigator.gpu;}
+async function loadWebLLMLib(){if(!webllmState.lib)webllmState.lib=await import("https://esm.run/@mlc-ai/web-llm");return webllmState.lib;}
+async function getWebLLMModels(){const w=await loadWebLLMLib();return (w.prebuiltAppConfig?.model_list||[]).map(m=>m.model_id);}
+async function ensureWebLLM(modelId){if(!hasWebGPU())throw new Error("WebGPU 미지원");if(webllmState.engine&&webllmState.modelId===modelId)return webllmState.engine;const w=await loadWebLLMLib();const ids=(w.prebuiltAppConfig?.model_list||[]).map(m=>m.model_id);let id=modelId;if(!ids.includes(id))id=WEBLLM_PREFERRED.find(x=>ids.includes(x))||ids[0];if(webllmState.engine){try{await webllmState.engine.unload()}catch(e){}webllmState.engine=null;}webllmLoader.set(true,0,"브라우저 AI 준비 중…");let le=null;try{for(let a=1;a<=4;a++){try{webllmState.engine=await w.CreateMLCEngine(id,{initProgressCallback:(r)=>webllmLoader.set(true,r.progress||0,(a>1?"(재시도 "+a+") ":"")+(r.text||""))},{context_window_size:8192});webllmState.modelId=id;le=null;break;}catch(e){le=e;await new Promise(r=>setTimeout(r,1500));}}}finally{webllmLoader.set(false,1,"");}if(le)throw new Error("브라우저 AI 다운로드 실패");return webllmState.engine;}
+async function callWebLLM({model,system,messages,maxTokens=2000,stream=false,onDelta}){const eng=await ensureWebLLM(model);const msgs=[];if(system)msgs.push({role:"system",content:system});for(const m of messages)msgs.push({role:m.role,content:m.content});const cap=Math.min(maxTokens,3600);if(stream){let full="";const ch=await eng.chat.completions.create({messages:msgs,stream:true,max_tokens:cap});for await(const c of ch){const d=(c.choices&&c.choices[0]&&c.choices[0].delta&&c.choices[0].delta.content)||"";if(d){full+=d;onDelta&&onDelta(full,d);}}return full;}const r=await eng.chat.completions.create({messages:msgs,max_tokens:cap});return (r.choices&&r.choices[0]&&r.choices[0].message&&r.choices[0].message.content)||"";}
+const manualBridge={queue:[],notify:null,request(p,m){return new Promise((res,rej)=>{this.queue.push({id:uid("m"),promptText:p,meta:m||{},resolve:res,reject:rej});this.notify&&this.notify();})},current(){return this.queue[0]||null},count(){return this.queue.length},resolveCurrent(t){const c=this.queue.shift();if(c)c.resolve(t);this.notify&&this.notify();},rejectCurrent(e){const c=this.queue.shift();if(c)c.reject(e||new Error("취소"));this.notify&&this.notify();}};
+async function callManual({system,messages,onDelta,meta}){let t="";if(system)t+=system+"\n\n";t+=messages.map(m=>m.content).join("\n\n");const out=await manualBridge.request(t,meta);onDelta&&onDelta(out,out);return out;}
+async function runLLM(settings,opts){const b=settings.backend||"manual";if(b==="ollama")return callOllama({url:settings.ollamaUrl,model:settings.ollamaModel,...opts});if(b==="webllm")return callWebLLM({model:settings.webllmModel,...opts});if(b==="manual")return callManual(opts);return callClaude({apiKey:settings.apiKey,model:settings.model,...opts});}
+function backendReady(s){const b=s.backend||"manual";if(b==="manual")return true;if(b==="ollama")return !!s.ollamaModel;if(b==="webllm")return hasWebGPU();return !!(s.apiKey&&s.apiKey.length>10);}
+function backendLabel(s){const b=s.backend||"manual";if(b==="manual")return "수동/챗GPT 모드";if(b==="ollama")return "로컬 Ollama"+(s.ollamaModel?" · "+s.ollamaModel:"");if(b==="webllm")return "브라우저 내장 AI";return "Anthropic API";}
+
+/* ============================================================
+   Whisper STT (A1)
+   ============================================================ */
+const WHISPER_MODELS=[{id:"onnx-community/whisper-small",label:"small · 한국어 권장(균형)"},{id:"onnx-community/whisper-large-v3-turbo",label:"large-v3-turbo · 최고 정확도(최초 다운로드 큼·WebGPU 권장)"},{id:"onnx-community/whisper-base",label:"base · 빠름·가벼움(한국어 약함)"},{id:"onnx-community/whisper-tiny",label:"tiny · 가장 빠름(테스트용)"}];
+const sttState={pipe:null,modelId:null};
+const sttLoader={active:false,progress:0,text:"",notify:null,set(a,p,t){this.active=a;this.progress=p;this.text=t;this.notify&&this.notify();}};
+async function loadTransformers(){const lib=await import("https://esm.run/@huggingface/transformers@3.3.3");lib.env.allowLocalModels=false;lib.env.useBrowserCache=true;return lib;}
+async function ensureTranscriber(modelId){
+  if(sttState.pipe&&sttState.modelId===modelId)return sttState.pipe;
+  const lib=await loadTransformers();const device=hasWebGPU()?"webgpu":"wasm";
+  const progress_callback=(p)=>{if(p&&p.status==="progress"){const pct=p.total?p.loaded/p.total:0;sttLoader.set(true,pct,(p.file||"")+" "+Math.round(pct*100)+"%");}else if(p&&p.status)sttLoader.set(true,sttLoader.progress,p.status);};
+  /* q4(4비트) decoder는 한국어에서 품질 붕괴(반복 hallucination) → q8 우선, 안 되면 단계적 fallback */
+  const tries=device==="webgpu"?["q8","fp32",{encoder_model:"fp16",decoder_model_merged:"q4"},undefined]:["q8","fp32",undefined];
+  sttLoader.set(true,0,"전사 모델 다운로드 중… (최초 1회)");let le=null;
+  try{for(const dtype of tries){try{const opts={device,progress_callback};if(dtype!==undefined)opts.dtype=dtype;sttState.pipe=await lib.pipeline("automatic-speech-recognition",modelId,opts);sttState.modelId=modelId;le=null;break;}catch(e){le=e;sttLoader.set(true,0,"다른 형식으로 재시도 중…");}}}finally{sttLoader.set(false,1,"");}
+  if(le)throw new Error("전사 모델 로드 실패 — 네트워크 확인 또는 tiny 모델 선택. ("+(le.message||le)+")");
+  return sttState.pipe;
+}
+async function fileToPCM16k(file){const ab=await file.arrayBuffer();const AC=window.AudioContext||window.webkitAudioContext;const tmp=new AC();let decoded;try{decoded=await tmp.decodeAudioData(ab.slice(0));}catch(e){tmp.close&&tmp.close();throw new Error("오디오 디코드 실패 — mp3/wav/m4a/ogg/webm 또는 오디오 포함 mp4 사용");}tmp.close&&tmp.close();const dur=decoded.duration;const off=new OfflineAudioContext(1,Math.max(1,Math.ceil(dur*16000)),16000);const src=off.createBufferSource();src.buffer=decoded;src.connect(off.destination);src.start();const rendered=await off.startRendering();return{pcm:rendered.getChannelData(0),duration:dur};}
+async function transcribeFile(file,modelId,language,onPhase){onPhase&&onPhase("오디오 디코딩 중…");const{pcm,duration}=await fileToPCM16k(file);onPhase&&onPhase("전사 모델 준비 중…");const pipe=await ensureTranscriber(modelId);onPhase&&onPhase("전사 중… (길이에 따라 수 분)");const out=await pipe(pcm,{language:language==="auto"?undefined:language,task:"transcribe",return_timestamps:true,chunk_length_s:30,stride_length_s:5,no_repeat_ngram_size:3,temperature:0});const chunks=(out.chunks||[]).map(c=>({id:uid("s"),start:(c.timestamp&&c.timestamp[0])||0,end:(c.timestamp&&c.timestamp[1])||0,text:(c.text||"").trim(),speaker:"화자 1"})).filter(c=>c.text);if(!chunks.length&&out.text)chunks.push({id:uid("s"),start:0,end:duration,text:out.text.trim(),speaker:"화자 1"});return{chunks,duration};}
+function audioDuration(url){return new Promise(res=>{try{const a=new Audio();a.preload="metadata";a.onloadedmetadata=()=>res(a.duration||0);a.onerror=()=>res(0);a.src=url;setTimeout(()=>res(a.duration||0),4000);}catch(e){res(0);}});}
+
+/* ============================================================
+   임베딩 + k-means (A3)
+   ============================================================ */
+const EMB_MODEL="Xenova/paraphrase-multilingual-MiniLM-L12-v2";
+const embState={extractor:null};
+const embLoader={active:false,progress:0,text:"",notify:null,set(a,p,t){this.active=a;this.progress=p;this.text=t;this.notify&&this.notify();}};
+async function ensureExtractor(){if(embState.extractor)return embState.extractor;const lib=await loadTransformers();const device=hasWebGPU()?"webgpu":"wasm";embLoader.set(true,0,"임베딩 모델 다운로드 중… (최초 1회)");try{embState.extractor=await lib.pipeline("feature-extraction",EMB_MODEL,{device,progress_callback:(p)=>{if(p&&p.status==="progress"){const pct=p.total?p.loaded/p.total:0;embLoader.set(true,pct,(p.file||"")+" "+Math.round(pct*100)+"%");}else if(p&&p.status)embLoader.set(true,embLoader.progress,p.status);}});}catch(e){try{embState.extractor=await lib.pipeline("feature-extraction","Xenova/all-MiniLM-L6-v2",{device});}catch(e2){embLoader.set(false,1,"");throw new Error("임베딩 모델 로드 실패: "+(e.message||e));}}finally{embLoader.set(false,1,"");}return embState.extractor;}
+async function embedTexts(texts,onProg){const ex=await ensureExtractor();const vecs=[];const B=24;for(let i=0;i<texts.length;i+=B){const batch=texts.slice(i,i+B);const out=await ex(batch,{pooling:"mean",normalize:true});const list=out.tolist?out.tolist():out;for(const v of list)vecs.push(Float32Array.from(v));onProg&&onProg(Math.min(1,(i+B)/texts.length));}return vecs;}
+function kmeans(vectors,k,iters=30){const n=vectors.length;if(!n)return{assign:[]};const d=vectors[0].length;k=Math.max(1,Math.min(k,n));const idx=[...Array(n).keys()];for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}let cent=idx.slice(0,k).map(i=>Array.from(vectors[i]));let assign=new Array(n).fill(0);for(let it=0;it<iters;it++){let changed=false;for(let i=0;i<n;i++){let best=0,bd=Infinity;const v=vectors[i];for(let c=0;c<k;c++){let s=0;const cc=cent[c];for(let j=0;j<d;j++){const x=v[j]-cc[j];s+=x*x;}if(s<bd){bd=s;best=c;}}if(assign[i]!==best){assign[i]=best;changed=true;}}const sums=Array.from({length:k},()=>new Float64Array(d));const cnt=new Array(k).fill(0);for(let i=0;i<n;i++){const c=assign[i];cnt[c]++;const v=vectors[i];const su=sums[c];for(let j=0;j<d;j++)su[j]+=v[j];}for(let c=0;c<k;c++){if(!cnt[c]){cent[c]=Array.from(vectors[Math.floor(Math.random()*n)]);continue;}for(let j=0;j<d;j++)cent[c][j]=sums[c][j]/cnt[c];}if(!changed&&it>0)break;}return{assign};}
+
+/* ============================================================
+   PDF 텍스트 추출 + 간이 RAG (A4)
+   ============================================================ */
+const PDFJS_VER="4.10.38";let pdfjsLib=null;
+async function loadPdfjs(){if(pdfjsLib)return pdfjsLib;const lib=await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@"+PDFJS_VER+"/build/pdf.min.mjs");lib.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@"+PDFJS_VER+"/build/pdf.worker.min.mjs";pdfjsLib=lib;return lib;}
+async function extractPdfText(file,onProg){const lib=await loadPdfjs();const ab=await file.arrayBuffer();const doc=await lib.getDocument({data:ab}).promise;let text="";for(let p=1;p<=doc.numPages;p++){const page=await doc.getPage(p);const c=await page.getTextContent();text+=c.items.map(i=>i.str).join(" ")+"\n";onProg&&onProg(p/doc.numPages);}return text.trim();}
+function chunkText(text,size=600,overlap=100){const out=[];const t=(text||"").replace(/\s+/g," ").trim();for(let i=0;i<t.length;i+=(size-overlap)){out.push(t.slice(i,i+size));}return out.filter(c=>c.trim().length>40);}
+function dot(a,b){let s=0;const n=Math.min(a.length,b.length);for(let i=0;i<n;i++)s+=a[i]*b[i];return s;}
+
+/* ============================================================
+   프롬프트
+   ============================================================ */
+const SYS_RESEARCH="당신은 20년 경력의 시니어 UX 리서처/정성데이터 분석가입니다. 근거에 기반해 한국어로 구체적이고 실무적으로 응답합니다. 인용은 원문을 유지하고, 통계를 지어내지 않습니다.";
+function buildSummaryPrompt(segs,ctx){const trans=segs.map(s=>`[${fmtTime(s.start)}] ${s.speaker?s.speaker+": ":""}${s.text}`).join("\n");return `아래 타임스탬프 인터뷰 전사록을 분석해 JSON으로만 응답하세요(설명·코드펜스 없이).${ctx?"\n[리서치 맥락] "+ctx:""}
+{ "themes":[{"tag":"주제","points":["핵심 발언 요약"]}], "summary":"3~4문장 요약", "quotes":[{"text":"원문 인용","timestamp":"mm:ss","speaker":"화자"}], "followups":["후속 질문"] }
+규칙: themes 3~6개, quotes 3~6개(전사록에 실제 있는 표현만), 모두 한국어.
+
+[전사록]
+${trans}`;}
+function buildCodebookPrompt(samples,hint){return `아래 설문 개방형 응답에서 반복 주제를 6~12개 코드로 정의(코드북)하세요.${hint?"\n참고 기준: "+hint:""}
+JSON만: { "codebook":[{"code":"코드명","desc":"정의 한 줄"}] }
+
+[응답 샘플]
+${samples.map((s,i)=>`${i+1}. ${s}`).join("\n")}`;}
+function buildCodingPrompt(cb,chunk){return `아래 코드북으로 각 응답을 코딩(코드 1개+ , 감성 pos/neu/neg)하세요. 코드는 코드북 code만 사용.
+[코드북]
+${cb.map(c=>`- ${c.code}: ${c.desc||""}`).join("\n")}
+JSON만(입력 id 유지): { "coded":[{"id":"id","codes":["코드"],"sentiment":"pos|neu|neg"}] }
+
+[응답]
+${chunk.map(r=>`(${r.id}) ${r.text}`).join("\n")}`;}
+function buildLabelPrompt(members){return `아래 의미적으로 묶인 리뷰 묶음을 분석하세요.
+JSON만: { "topic":"핵심 주제(짧게)", "sentiment":"긍정|중립|부정", "summary":"한 줄 요약", "quotes":["대표 인용1","대표 인용2"] }
+
+[리뷰 묶음]
+${members.map((m,i)=>`${i+1}. ${m}`).join("\n")}`;}
+function buildPriorityPrompt(cl){return `아래 VOC 군집 요약으로 개선 우선순위 Top 5를 근거와 함께.
+JSON만: { "priorities":[{"title":"개선 항목","why":"근거(군집/빈도)","impact":"상|중|하"}] }
+
+[군집 요약]
+${cl.map(c=>`- [${c.size}건/${c.sentiment}] ${c.topic}: ${c.summary}`).join("\n")}`;}
+function buildDeskPrompt(question,contexts){return `아래 [자료]만 근거로 "${question}"에 답하는 리서치 브리프를 작성하세요. 각 주장에는 반드시 출처 [S번호]를 답니다. 자료에 없는 내용은 지어내지 말고 gaps에 적으세요.
+JSON만: { "findings":[{"claim":"발견(주장)","source":"[S1] 문서명"}], "comparison":"자료 간 일치/상충 비교", "gaps":["추가 조사 필요 항목"] }
+
+[자료]
+${contexts}`;}
+function buildGuidePrompt(goal,participant,hyp,dur){return `"${goal}"을 위한 1:1 사용자 인터뷰 가이드를 작성하세요. 대상: ${participant||"(미정)"}.${hyp?" 가설: "+hyp:""}
+유도/이중 질문을 피하고 개방형으로. JSON만:
+{ "sections":[{"name":"섹션명","questions":[{"q":"질문","probes":["후속 질문"]}]}], "time_plan":"${dur}분 기준 섹션별 시간 배분", "bias_notes":["주의할 유도질문/편향 코멘트"] }
+섹션은 도입(라포)→핵심→마무리 구조, 핵심 질문 8~10개. 모두 한국어.`;}
+
+/* ============================================================
+   UI primitives
+   ============================================================ */
+function Spinner({size=18}){return <span className="inline-block animate-spin rounded-full border-2 border-slate-300 border-t-brand align-[-2px]" style={{width:size,height:size}}/>;}
+function Btn({children,onClick,variant="primary",size="md",disabled,className,...rest}){const v={primary:"bg-brand text-white hover:bg-brand-hover shadow-sm",soft:"bg-brand-light text-brand-hover hover:bg-[#e3e6f7]",ghost:"text-slate-600 hover:bg-slate-100",outline:"border border-hair bg-white text-slate-700 hover:bg-slate-50",danger:"text-rose-600 hover:bg-rose-50"}[variant];const s={sm:"px-3 py-1.5 text-[13px]",md:"px-4 py-2.5 text-sm",lg:"px-5 py-3 text-[15px]"}[size];return <button onClick={onClick} disabled={disabled} className={cx("inline-flex items-center justify-center gap-2 rounded-[10px] font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed",v,s,className)} {...rest}>{children}</button>;}
+function Field({label,hint,children}){return <label className="block"><div className="mb-1.5 flex items-baseline gap-2"><span className="text-sm font-semibold text-ink">{label}</span>{hint&&<span className="text-[13px] text-slate-400">{hint}</span>}</div>{children}</label>;}
+const inputVisual="rounded-[10px] border border-hair bg-white px-3.5 py-2.5 text-[15px] text-ink placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 transition";
+const inputCls="w-full "+inputVisual;
+function Card({children,className}){return <div className={cx("rounded-2xl border border-hair bg-white shadow-soft",className)}>{children}</div>;}
+function Chip({children,className}){return <span className={cx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 ring-inset",className||"bg-slate-100 text-slate-600 ring-slate-200/60")}>{children}</span>;}
+function Toast({toast}){if(!toast)return null;const m={info:"bg-ink",error:"bg-rose-600",ok:"bg-brand-hover"};return <div className="fixed bottom-7 left-1/2 z-[70] -translate-x-1/2"><div className={cx("rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-pop fade-in",m[toast.type]||m.info)}>{toast.msg}</div></div>;}
+function WsSave({title,getText,toast}){const[d,setD]=useState(false);return <Btn size="sm" variant="soft" onClick={()=>{const t=getText&&getText();if(!t||!String(t).trim()){toast&&toast("error","저장할 결과가 없어요");return;}wsAdd(title,t);setD(true);toast&&toast("ok","보관함에 저장됨 — 다른 도구·앱에서 가져올 수 있어요");setTimeout(()=>setD(false),1600);}}>{d?"✓ 저장됨":"📤 보관함"}</Btn>;}
+function WsPull({onPick,label}){const arr=wsLoad();if(!arr.length)return null;return <select className={cx(inputVisual,"mb-2 w-full py-1.5 text-[13px]")} defaultValue="" onChange={e=>{const a=arr.find(x=>x.id===e.target.value);if(a&&onPick)onPick(a.text);e.target.value="";}}><option value="">{label||"📥 보관함에서 가져오기…"}</option>{arr.map(a=><option key={a.id} value={a.id}>{a.title} · {a.at}</option>)}</select>;}
+function WorkspaceModal({onClose,toast}){const[,f]=useState(0);const[edit,setEdit]=useState(null);const[draft,setDraft]=useState("");const arr=wsLoad();return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={onClose}><Card className="max-h-[88vh] w-full max-w-2xl overflow-y-auto p-6 shadow-pop fade-in"><div onClick={e=>e.stopPropagation()}><div className="mb-4 flex items-center justify-between"><div><h3 className="text-lg font-bold text-ink">📋 보관함</h3><p className="text-[13px] text-slate-400">도구·앱이 공유합니다. 결과를 <b>📤 보관함</b>으로 저장하고, 여기서 <b>편집·확정</b>한 뒤 입력칸 위 <b>📥 가져오기</b>로 다음 단계에 넘기세요.</p></div><button className="text-slate-400 hover:text-ink" onClick={onClose}>✕</button></div>{!arr.length?<p className="rounded-xl bg-slate-50 p-4 text-[14px] text-slate-500">아직 저장된 산출물이 없어요. 결과 카드의 <b>📤 보관함</b> 버튼으로 저장하세요.</p>:<div className="space-y-2">{arr.map(a=><Card key={a.id} className="p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="truncate font-semibold text-ink">{a.title}</div><div className="text-[12px] text-slate-400">{a.at}</div></div><div className="flex shrink-0 gap-1">{edit===a.id?<Btn size="sm" onClick={()=>{wsUpdate(a.id,draft);setEdit(null);toast&&toast("ok","수정 저장됨");}}>저장</Btn>:<Btn size="sm" variant="outline" onClick={()=>{setEdit(a.id);setDraft(a.text);}}>편집</Btn>}<Btn size="sm" variant="outline" onClick={()=>{copyText(a.text);toast&&toast("ok","복사됨");}}>복사</Btn><Btn size="sm" variant="danger" onClick={()=>{wsDel(a.id);if(edit===a.id)setEdit(null);f(n=>n+1);}}>삭제</Btn></div></div>{edit===a.id?<textarea value={draft} onChange={e=>setDraft(e.target.value)} rows={8} className={cx(inputCls,"mt-2 resize-y text-[12px]")}/>:<pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[12px] text-slate-600">{String(a.text).slice(0,600)}</pre>}</Card>)}</div>}{!!arr.length&&<div className="mt-4 flex justify-end gap-2"><Btn size="sm" variant="outline" onClick={()=>download("uxax-workspace.json",JSON.stringify(arr,null,2),"application/json")}>↧ 전체 JSON</Btn><Btn size="sm" variant="ghost" onClick={()=>{if(confirm("보관함 전체를 비울까요?")){wsClear();f(n=>n+1);}}}>전체 비우기</Btn></div>}</div></Card></div>;}
+function WorkspaceFab({toast}){const[open,setOpen]=useState(false);const[,f]=useState(0);useEffect(()=>{const fn=()=>f(n=>n+1);wsBus.notify=fn;return()=>{if(wsBus.notify===fn)wsBus.notify=null;};},[]);const n=wsLoad().length;return <React.Fragment><button onClick={()=>setOpen(true)} className="no-print fixed bottom-5 right-5 z-[60] flex items-center gap-1.5 rounded-full bg-brand px-4 py-2.5 text-[13px] font-bold text-white shadow-pop hover:bg-brand-hover" title="보관함 (도구·앱 공유)">📋 보관함{n?(" "+n):""}</button>{open&&<WorkspaceModal onClose={()=>setOpen(false)} toast={toast}/>}</React.Fragment>;}
+function StepHead({n,title,sub,done}){return <div className="mb-3 flex items-center gap-3"><div className={cx("flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold",done?"bg-emerald-500 text-white":"bg-brand text-white")}>{done?"✓":n}</div><div><div className="text-[17px] font-bold text-ink">{title}</div>{sub&&<div className="text-[13px] text-slate-400">{sub}</div>}</div></div>;}
+function SentChip({s}){const m={pos:["긍정","bg-emerald-50 text-emerald-600 ring-emerald-100"],neu:["중립","bg-slate-100 text-slate-500 ring-slate-200/60"],neg:["부정","bg-rose-50 text-rose-600 ring-rose-100"],"긍정":["긍정","bg-emerald-50 text-emerald-600 ring-emerald-100"],"중립":["중립","bg-slate-100 text-slate-500 ring-slate-200/60"],"부정":["부정","bg-rose-50 text-rose-600 ring-rose-100"]};const[t,c]=m[s]||[s,"bg-slate-100 text-slate-500"];return <Chip className={c}>{t}</Chip>;}
+function BarChart({data,color="#5e6ad2"}){const max=Math.max(1,...data.map(d=>d.value));return <div className="space-y-1.5">{data.map((d,i)=><div key={i} className="flex items-center gap-2"><div className="w-32 shrink-0 truncate text-right text-[13px] text-slate-600" title={d.label}>{d.label}</div><div className="h-5 flex-1 rounded bg-slate-100"><div className="flex h-5 items-center justify-end rounded px-1.5 text-[11px] font-bold text-white" style={{width:Math.max(8,(d.value/max)*100)+"%",background:color}}>{d.value}</div></div></div>)}</div>;}
+
+/* ============================================================
+   학습 레이어 — 전체 프로세스 내비 + 초급자 ?도움말 + 예제
+   ============================================================ */
+const PROCESS=[
+  {id:"P1",file:"P1_리서치스튜디오.html",icon:"🔍",name:"리서치"},
+  {id:"P2",file:"P2_정의스튜디오.html",icon:"🧩",name:"정의"},
+  {id:"P3",file:"P3_아이디에이션스튜디오.html",icon:"💡",name:"아이디에이션"},
+  {id:"P4",file:"P4_콘텐츠스튜디오.html",icon:"✎",name:"콘텐츠"},
+  {id:"P5",file:"P5_디자인핸드오프스튜디오.html",icon:"⌘",name:"디자인·핸드오프"},
+  {id:"P6",file:"P6_품질검증스튜디오.html",icon:"✓",name:"품질검증"},
+  {id:"P7",file:"P7_피드백운영스튜디오.html",icon:"📊",name:"피드백·운영"},
+];
+const CURRENT_PHASE="P1";
+function ProcessNav({current}){
+  const i=PROCESS.findIndex(p=>p.id===current);const next=PROCESS[i+1];
+  return <div className="border-t border-hair bg-white/70">
+    <div className="mx-auto flex max-w-[1100px] items-center gap-1 overflow-x-auto px-4 py-2 text-[12px]">
+      <span className="mr-1 shrink-0 font-bold text-slate-400">UX 프로세스</span>
+      {PROCESS.map((p,idx)=>{const cur=p.id===current;return <React.Fragment key={p.id}>
+        {idx>0&&<span className="shrink-0 text-slate-300">→</span>}
+        <a href={"./"+p.file} title={p.id+" "+p.name+" 단계로 이동"} className={cx("flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 font-semibold transition",cur?"bg-brand text-white":"text-slate-500 hover:bg-slate-100")}><span>{p.icon}</span><span>{p.id}</span><span className={cur?"":"hidden sm:inline"}>{p.name}</span></a>
+      </React.Fragment>;})}
+      <span className="ml-2 hidden shrink-0 text-slate-400 md:inline">· 지금 <b className="text-brand-hover">{current} {PROCESS[i]?.name}</b>{next?<> · 다음 <b className="text-slate-500">{next.id} {next.name}</b></>:""}</span>
+    </div>
+  </div>;
+}
+function HelpCue({title,faqs,settings,openSettings,toast}){
+  const[open,setOpen]=useState(false);const[q,setQ]=useState("");const[a,setA]=useState("");const[busy,setBusy]=useState(false);
+  const ask=async()=>{if(!q.trim())return;if(!backendReady(settings)){toast&&toast("error","AI 엔진을 먼저 설정하세요(⚙)");openSettings&&openSettings();return;}setBusy(true);setA("");try{const out=await runLLM(settings,{system:"당신은 UX 프로세스를 가르치는 친절한 시니어 멘토입니다. UX·개발을 잘 모르는 초급 디자이너에게 전문용어는 풀어서, 쉬운 한국어로 3~5문장으로 답합니다.",messages:[{role:"user",content:(title?"["+title+"] ":"")+q}],maxTokens:500,stream:false,meta:{who:"학습 도움말"}});setA(out||"(답이 비었어요)");}catch(e){setA("실패: "+(e.message||e));}finally{setBusy(false);}};
+  return <span className="relative inline-block align-middle">
+    <button type="button" onClick={()=>setOpen(o=>!o)} title="이게 뭔지 물어보기" className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-light text-[12px] font-bold text-brand-hover hover:bg-brand hover:text-white">?</button>
+    {open&&<div className="absolute left-0 top-7 z-[75] w-72 rounded-xl border border-hair bg-white p-3 text-left shadow-pop fade-in" onClick={e=>e.stopPropagation()}>
+      <div className="mb-1.5 flex items-center justify-between"><span className="text-[12px] font-bold text-brand-hover">❔ {title||"도움말"}</span><button className="text-slate-400 hover:text-ink" onClick={()=>setOpen(false)}>✕</button></div>
+      <ul className="space-y-1.5 text-[12.5px] leading-relaxed text-slate-600">{(faqs||[]).map((f,i)=><li key={i}><b className="text-ink">{f.q}</b><div>{f.a}</div></li>)}</ul>
+      <div className="mt-2 border-t border-hair pt-2">
+        <div className="text-[11px] font-semibold text-slate-400">더 궁금하면 AI 멘토에게</div>
+        <div className="mt-1 flex gap-1"><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")ask();}} placeholder="예: 군집 수는 어떻게 정해요?" className={cx(inputVisual,"min-w-0 flex-1 py-1 text-[12px]")}/><Btn size="sm" onClick={ask} disabled={busy}>{busy?<Spinner size={12}/>:"질문"}</Btn></div>
+        {a&&<div className="mt-2 whitespace-pre-wrap rounded-lg bg-brand-faint p-2 text-[12.5px] leading-relaxed text-slate-700">{a}</div>}
+      </div>
+    </div>}
+  </span>;
+}
+const DEMO_VOC=["택배거래는 입금하고 나서 물건 올 때까지가 제일 불안해요","판매자 후기가 하나도 없으면 사기일까봐 안 사게 돼요","채팅 답장이 빨라서 신뢰가 갔어요","앱에서 안전결제 거니까 마음이 좀 놓였어요","가격은 싼데 수수료가 붙으니 별로네요","검색 필터가 부족해서 원하는 물건 찾기가 힘들어요","사진이 흐릿한 매물은 그냥 거르게 됩니다","직거래 약속 장소 정하는 게 너무 번거로워요","사기 의심돼서 신고했는데 처리가 너무 느렸어요","리뷰 별점이 실제 경험이랑 달라서 못 믿겠어요","첫 거래라 뭘 조심해야 할지 하나도 모르겠어요","환불 절차가 복잡하고 안내도 부족합니다"].join("\n");
+const VOC_FAQ=[
+  {q:"VOC가 뭐예요?",a:"Voice of Customer, ‘고객의 소리’예요. 리뷰·문의·커뮤니티 글처럼 사용자가 남긴 말을 모은 데이터를 뜻해요."},
+  {q:"군집(클러스터)이 뭐예요?",a:"비슷한 의미의 리뷰끼리 자동으로 묶은 한 덩어리예요. ‘배송 불만’끼리, ‘가격 불만’끼리 모아 어떤 문제가 많은지 한눈에 봐요."},
+  {q:"여기 뭘 넣어요?",a:"리뷰를 한 줄에 하나씩 넣거나 CSV를 올리면 돼요. 막막하면 위의 ‘▶ 예제로 해보기’를 누르면 샘플이 채워져요."},
+];
+const DEMO_INTERVIEW=[
+  {spk:"진행자",text:"중고거래 앱에서 첫 거래를 하기까지 어떠셨는지 편하게 말씀해 주세요."},
+  {spk:"참가자",text:"솔직히 처음엔 입금하고 나서 물건이 안 오면 어쩌나, 그게 제일 무서웠어요."},
+  {spk:"진행자",text:"그 불안을 줄이려고 어떤 걸 보셨어요?"},
+  {spk:"참가자",text:"판매자 후기를 진짜 꼼꼼히 봤어요. 후기가 하나도 없으면 그냥 안 샀어요."},
+  {spk:"참가자",text:"채팅을 보내봤는데 답이 빨리 오니까 좀 믿음이 가더라고요."},
+  {spk:"진행자",text:"실제로 결제할 때는 어떠셨어요?"},
+  {spk:"참가자",text:"안전결제 거는 옵션을 보고 그제서야 마음이 놓였어요. 직거래는 아직도 좀 무서워요."},
+  {spk:"참가자",text:"근데 첫 거래라 뭘 조심해야 하는지 알려주는 게 없어서 좀 헤맸어요."},
+];
+const INTERVIEW_FAQ=[
+  {q:"전사가 뭐예요?",a:"인터뷰 녹음을 글자로 받아쓰는 거예요. 여기선 브라우저가 자동으로 해줘서 따로 받아쓸 필요가 없어요."},
+  {q:"화자 지정은 왜 해요?",a:"누가 한 말인지(진행자/참가자) 구분해두면 요약이 더 정확해져요. 자동 분리는 안 되니 칸을 직접 채우면 좋아요."},
+  {q:"요약 결과는 어디 써요?",a:"주제·핵심 인용이 다음 단계 P2 정의(어피니티·여정맵)의 재료가 돼요."},
+];
+const DEMO_SURVEY=["입금하고 물건 받을 때까지가 제일 불안함","판매자 후기가 많으면 믿고 삼","안전결제가 있으면 안심됨","채팅 답이 느리면 사기인가 의심됨","수수료 떼는 게 좀 아깝다","첫 거래라 절차를 잘 모르겠음","사진이 흐린 매물은 그냥 거름","직거래 약속 잡기가 번거로움","환불 안내가 부족함","리뷰 별점을 못 믿겠음","검색이 잘 안 돼서 불편","앱은 깔끔해서 보기 좋음"].join("\n");
+const SURVEY_FAQ=[
+  {q:"개방형 코딩이 뭐예요?",a:"자유서술 응답을 ‘반복되는 주제(코드)’로 분류하는 거예요. 수백 건을 손으로 읽는 대신 AI가 일관되게 묶어줘요."},
+  {q:"코드북이 뭐예요?",a:"분류 기준 목록이에요. AI가 먼저 코드북을 만들고, 그 기준으로 전체 응답을 똑같이 코딩해요."},
+  {q:"여기 뭘 넣어요?",a:"CSV를 올리거나 응답을 한 줄에 하나씩 넣어요. 막막하면 ‘▶ 예제로 해보기’를 누르세요."},
+];
+const DEMO_DESK_TEXT="2024 국내 중고거래 시장 보고서 발췌. 비대면 중고거래 이용자의 68%가 ‘첫 거래 시 사기 우려’를 가장 큰 진입장벽으로 꼽았다. 안전결제(에스크로) 도입 후 신규 이용자의 첫 거래 전환율이 23% 상승했다. 판매자 신뢰지표(후기 수·인증 배지) 노출이 거래 성사율과 강한 상관을 보였다(r=0.61). 한편 신규 이용자의 41%는 ‘첫 거래 절차 안내 부족’을 불편으로 응답했다. 분쟁 발생률은 직거래보다 택배거래에서 1.8배 높았다.";
+const DEMO_DESK_Q="비대면 중고거래에서 신규 사용자의 첫 거래 신뢰 장벽과 그 해소 방안은?";
+const DESK_FAQ=[
+  {q:"데스크 리서치가 뭐예요?",a:"사용자를 직접 만나기 전에 보고서·논문·기사 같은 2차 자료로 배경을 조사하는 거예요."},
+  {q:"RAG가 뭐예요?",a:"검색증강생성. 자료를 잘게 나눠 질문과 가장 관련된 부분만 골라 요약하는 방식이라, 자료에 있는 내용만 근거로 써서 지어내기(환각)를 줄여요."},
+  {q:"출처 연결은 왜 중요해요?",a:"모든 주장에 [출처]를 붙여 ‘이건 어디서 나온 말이지?’를 나중에 추적할 수 있게 해요."},
+];
+const DEMO_GUIDE={goal:"첫 거래 전환을 막는 불안 요인과 그 맥락 파악",participant:"가입 후 30일간 거래가 없는 신규 사용자",hyp:"사기 우려와 절차 안내 부족이 첫 거래를 망설이게 만든다"};
+const GUIDE_FAQ=[
+  {q:"인터뷰 가이드가 뭐예요?",a:"인터뷰에서 무엇을 어떤 순서로 물을지 적은 질문지예요. 도입→핵심→마무리 구조로 만들어요."},
+  {q:"유도질문이 뭐예요?",a:"원하는 답을 은근히 끌어내는 질문이에요(예: ‘이거 불편하셨죠?’). 진짜 생각을 못 듣게 하니 피해야 해요."},
+  {q:"프로브가 뭐예요?",a:"답에 따라 더 깊이 파고드는 후속 질문이에요(예: ‘왜 그렇게 느끼셨어요?’)."},
+];
+
+/* 사용 가이드 — 항상 보이는 "이 도구로 뭘 함" 1줄 + [📖 사용방법] 버튼 → 상세는 모달 */
+function Guide({what,where,why,prep,inputs,steps,tips,note,defaultOpen}){
+  const[open,setOpen]=useState(false);
+  const Sec=({icon,title,children})=><div><div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-brand-hover">{icon} {title}</div><div className="text-[14px] leading-relaxed text-slate-600">{children}</div></div>;
+  const hasDetail=where||why||prep||inputs||steps||tips||note;
+  return <React.Fragment>
+    <div className="mb-5 flex items-start gap-3 rounded-2xl border border-brand/20 bg-brand-faint px-4 py-3">
+      <span className="mt-0.5 shrink-0 text-lg">🎯</span>
+      <div className="flex-1 text-[14px] leading-relaxed text-slate-700"><b className="text-brand-hover">이 도구로:</b> {what}</div>
+      {hasDetail&&<button onClick={()=>setOpen(true)} className="shrink-0 self-center rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-brand-hover ring-1 ring-brand/30 transition hover:bg-brand hover:text-white" title="이 도구 자세한 사용방법">📖 사용방법</button>}
+    </div>
+    {open&&<div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={()=>setOpen(false)}><Card className="max-h-[88vh] w-full max-w-xl overflow-y-auto p-6 shadow-pop fade-in"><div onClick={e=>e.stopPropagation()}>
+      <div className="mb-4 flex items-center justify-between"><h3 className="text-lg font-bold text-ink">📖 사용방법 · 학습 가이드</h3><button className="text-slate-400 hover:text-ink" onClick={()=>setOpen(false)}>✕</button></div>
+      <div className="space-y-4">
+        {what&&<Sec icon="📘" title="무엇을 하나">{what}</Sec>}
+        {where&&<Sec icon="🧭" title="프로세스에서 위치">{where}</Sec>}
+        {why&&<Sec icon="💡" title="왜 중요한가">{why}</Sec>}
+        {prep&&<Sec icon="📎" title="준비물">{prep}</Sec>}
+        {inputs&&<Sec icon="✍️" title="입력 가이드 — 이렇게 넣어야 잘 나와요"><ul className="space-y-2">{inputs.map((x,i)=><li key={i}><b className="text-ink">{x.field}</b> — {x.desc}{x.ex&&<div className="mt-0.5 rounded bg-slate-50 px-2 py-1 text-[12px] text-slate-500">예) {x.ex}</div>}</li>)}</ul></Sec>}
+        {steps&&<Sec icon="🪜" title="사용 단계"><ol className="space-y-1.5">{steps.map((s,i)=><li key={i} className="flex gap-2"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">{i+1}</span><span><b className="text-ink">{s.t}</b> — {s.d}</span></li>)}</ol></Sec>}
+        {tips&&<Sec icon="⚠️" title="팁 · 주의"><ul className="ml-4 list-disc space-y-1 text-[13px]">{tips.map((t,i)=><li key={i}>{t}</li>)}</ul></Sec>}
+        {note&&<div className="rounded-lg bg-amber-50 px-3 py-2 text-[13px] text-amber-800">💡 {note}</div>}
+      </div>
+    </div></Card></div>}
+  </React.Fragment>;
+}
+/* 플로팅 학습 멘토 — 따라다니며 탭별 추천질문(FAQ 즉답·무료) + 자유질문(AI) + Q&A 학습저장(모아보기) */
+const FAQ_BY_TAB={interview:INTERVIEW_FAQ,survey:SURVEY_FAQ,voc:VOC_FAQ,desk:DESK_FAQ,guide:GUIDE_FAQ};
+const tabLabel=(id)=>{const t=(typeof TABS!=="undefined"?TABS:[]).find(x=>x.id===id);return t?t.label:id;};
+function MentorFab({tab,settings,openSettings,toast}){
+  const[open,setOpen]=useState(false);const[view,setView]=useState("ask");
+  const[thread,setThread]=useState([]);const[q,setQ]=useState("");const[busy,setBusy]=useState(false);const[,f]=useState(0);
+  const hasNS=!!(window.UXAX&&UXAX.mentorAdd);
+  const log=hasNS?UXAX.mentorLoad():[];
+  const answer=async(text)=>{
+    const qq=(text!==undefined?text:q||"").trim();if(!qq||busy)return;setQ("");
+    const faq=(FAQ_BY_TAB[tab]||[]).find(x=>x.q===qq||qq.indexOf(x.q.replace(/[?]/g,""))>=0);
+    if(faq){setThread(t=>[...t,{q:qq,a:faq.a}]);if(hasNS)UXAX.mentorAdd(tab,qq,faq.a);return;}
+    if(!backendReady(settings)){toast&&toast("error","AI 엔진을 먼저 설정하세요(⚙)");openSettings&&openSettings();return;}
+    setBusy(true);setThread(t=>[...t,{q:qq,a:"…"}]);
+    try{const out=await runLLM(settings,{system:"당신은 UX 프로세스를 가르치는 친절한 시니어 멘토입니다. UX·개발을 잘 모르는 초급 디자이너에게 전문용어는 풀어서, 쉬운 한국어로 3~5문장으로 답합니다.",messages:[{role:"user",content:"["+tabLabel(tab)+"] "+qq}],maxTokens:500,meta:{who:"학습 멘토"}});const a=out||"(답이 비었어요)";setThread(t=>{const c=[...t];c[c.length-1]={q:qq,a};return c;});if(hasNS)UXAX.mentorAdd(tab,qq,a);}
+    catch(e){setThread(t=>{const c=[...t];c[c.length-1]={q:qq,a:"실패: "+(e.message||e)};return c;});}
+    finally{setBusy(false);}
+  };
+  return <React.Fragment>
+    <button onClick={()=>setOpen(o=>!o)} className="no-print fixed bottom-[4.75rem] right-5 z-[60] flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-bold text-brand-hover shadow-pop ring-1 ring-brand/30 hover:bg-brand-light" title="학습 멘토 — 모르는 건 바로 물어보세요">🎓 학습 멘토{log.length?(" "+log.length):""}</button>
+    {open&&<div className="no-print fixed bottom-5 right-5 z-[70] flex max-h-[78vh] w-[370px] max-w-[92vw] flex-col rounded-2xl border border-hair bg-white shadow-pop fade-in">
+      <div className="flex items-center justify-between border-b border-hair px-4 py-3">
+        <div className="text-[14px] font-bold text-ink">🎓 학습 멘토</div>
+        <div className="flex items-center gap-1">
+          <button onClick={()=>setView(view==="ask"?"history":"ask")} className="rounded-full px-2 py-1 text-[12px] font-semibold text-slate-500 hover:bg-slate-100">{view==="ask"?("📚 내 질문"+(log.length?(" "+log.length):"")):"← 질문하기"}</button>
+          <button onClick={()=>setOpen(false)} className="rounded-full px-2 py-1 text-slate-400 hover:bg-slate-100">✕</button>
+        </div>
+      </div>
+      {view==="ask"?<React.Fragment>
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+          <div className="text-[12px] text-slate-400">지금 화면(<b className="text-slate-500">{tabLabel(tab)}</b>)에서 많이 묻는 것 — 눌러보세요:</div>
+          <div className="flex flex-wrap gap-1.5">{(FAQ_BY_TAB[tab]||[]).map((x,i)=><button key={i} onClick={()=>answer(x.q)} className="rounded-full bg-brand-faint px-2.5 py-1 text-[12px] font-semibold text-brand-hover hover:bg-brand-light">{x.q}</button>)}</div>
+          {thread.map((m,i)=><div key={i} className="space-y-1">
+            <div className="ml-auto w-fit max-w-[85%] rounded-2xl bg-brand px-3 py-2 text-[13px] text-white">{m.q}</div>
+            <div className="w-fit max-w-[92%] rounded-2xl bg-slate-100 px-3 py-2 text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap">{m.a==="…"?<Spinner size={14}/>:m.a}</div>
+          </div>)}
+        </div>
+        <div className="border-t border-hair p-3"><div className="flex gap-1.5"><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")answer();}} placeholder="궁금한 걸 입력…" className={cx(inputVisual,"min-w-0 flex-1 py-1.5 text-[13px]")}/><Btn size="sm" onClick={()=>answer()} disabled={busy}>{busy?<Spinner size={12}/>:"보내기"}</Btn></div><div className="mt-1.5 text-[11px] text-slate-400">물어본 건 ‘내 질문’에 모여서 나중에 복습할 수 있어요.</div></div>
+      </React.Fragment>:<div className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
+        {!log.length?<p className="rounded-xl bg-slate-50 p-3 text-[13px] text-slate-500">아직 질문 기록이 없어요. 모르는 걸 물어보면 여기 모여서 나중에 복습할 수 있어요.</p>:log.map(m=><div key={m.id} className="rounded-xl border border-hair p-2.5"><div className="text-[11px] text-slate-400">{tabLabel(m.page)} · {m.at}</div><div className="mt-0.5 text-[13px] font-semibold text-ink">Q. {m.q}</div><div className="mt-0.5 whitespace-pre-wrap text-[12.5px] leading-relaxed text-slate-600">{m.a}</div></div>)}
+        {!!log.length&&<button onClick={()=>{if(confirm("질문 기록을 모두 지울까요?")){UXAX.mentorClear();f(n=>n+1);}}} className="text-[12px] text-slate-400 hover:text-rose-500">기록 비우기</button>}
+      </div>}
+    </div>}
+  </React.Fragment>;
+}
+
+/* ============================================================
+   Overlays / modals
+   ============================================================ */
+function ProgressOverlay({state,title,emoji}){if(!state.active)return null;const pct=Math.round((state.progress||0)*100);return <div className="fixed inset-0 z-[85] flex items-center justify-center bg-ink/50 p-4"><Card className="w-full max-w-md p-6 text-center shadow-pop fade-in"><div className="mb-3 text-3xl">{emoji}</div><div className="text-base font-bold text-ink">{title}</div><div className="mt-1 text-[13px] text-slate-500">최초 1회만 모델을 받고 이후엔 캐시에서 즉시 실행됩니다.</div><div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand transition-all" style={{width:pct+"%"}}/></div><div className="mt-2 truncate text-[12px] text-slate-400">{state.text||(pct+"%")}</div></Card></div>;}
+function ManualModal({req,queueCount,onSubmit,onCancel}){const[answer,setAnswer]=useState("");const[copied,setCopied]=useState(false);useEffect(()=>{setAnswer("");setCopied(false)},[req&&req.id]);if(!req)return null;const copy=async()=>{await copyText(req.promptText);setCopied(true);setTimeout(()=>setCopied(false),1500)};return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4"><Card className="flex max-h-[90vh] w-full max-w-2xl flex-col shadow-pop fade-in"><div className="flex items-center justify-between border-b border-hair px-5 py-4"><div><h3 className="text-base font-bold text-ink">✍️ 수동 모드 — 챗봇에 물어보기</h3><p className="text-[13px] text-slate-400">{req.meta?.who?req.meta.who+" · ":""}복사 → ChatGPT/Claude에 붙여넣고 답을 아래에</p></div>{queueCount>1&&<Chip>대기 {queueCount}</Chip>}</div><div className="flex-1 overflow-y-auto px-5 py-4"><div className="mb-2 flex gap-2"><Btn size="sm" onClick={copy}>{copied?"✓ 복사됨":"📋 프롬프트 복사"}</Btn><Btn size="sm" variant="outline" onClick={()=>{copy();window.open("https://chatgpt.com/","_blank")}}>↗ ChatGPT</Btn><Btn size="sm" variant="outline" onClick={()=>{copy();window.open("https://claude.ai/","_blank")}}>↗ Claude</Btn></div><pre className="max-h-44 overflow-y-auto whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{req.promptText}</pre><div className="mt-4"><div className="mb-1.5 text-sm font-semibold text-ink">챗봇 답변 붙여넣기</div><textarea value={answer} onChange={e=>setAnswer(e.target.value)} rows={8} autoFocus className={cx(inputCls,"resize-y")} placeholder="답변 전체를 붙여넣으세요…"/></div></div><div className="flex justify-end gap-2 border-t border-hair px-5 py-3"><Btn variant="ghost" onClick={onCancel}>취소</Btn><Btn onClick={()=>onSubmit(answer)} disabled={!answer.trim()}>답변 사용</Btn></div></Card></div>;}
+const BACKENDS=[{id:"webllm",label:"🌐 브라우저 내장 AI",desc:"무료·설치/키 없음·WebGPU"},{id:"ollama",label:"🖥️ 로컬 Ollama",desc:"무료·내 PC·대량 처리 적합"},{id:"manual",label:"✍️ 수동/챗GPT",desc:"무료·복붙(대량엔 번거로움)"},{id:"api",label:"☁️ Anthropic API",desc:"유료·대량 처리 빠름"}];
+function SettingsModal({settings,onSave,onClose}){const[draft,setDraft]=useState({backend:"manual",ollamaUrl:"http://127.0.0.1:11434",ollamaModel:"",webllmModel:WEBLLM_PREFERRED[0],model:MODELS[0].id,apiKey:"",...settings});const[testing,setTesting]=useState(false);const[tr,setTr]=useState(null);const[om,setOm]=useState([]);const[lo,setLo]=useState(false);const[wm,setWm]=useState([]);const[lw,setLw]=useState(false);const refreshO=useCallback(async()=>{setLo(true);setTr(null);try{const l=await ollamaListModels(draft.ollamaUrl);setOm(l);if(l.length&&!l.includes(draft.ollamaModel))setDraft(d=>({...d,ollamaModel:l[0]}));if(!l.length)setTr({ok:false,msg:"모델 없음 → ollama pull exaone3.5:7.8b"});}catch(e){setTr({ok:false,msg:"연결 실패 — start-ollama.bat 실행"});setOm([]);}finally{setLo(false);}},[draft.ollamaUrl,draft.ollamaModel]);const refreshW=useCallback(async()=>{setLw(true);setTr(null);try{const l=await getWebLLMModels();setWm(l);if(l.length&&!l.includes(draft.webllmModel))setDraft(d=>({...d,webllmModel:WEBLLM_PREFERRED.find(x=>l.includes(x))||l[0]}));}catch(e){setTr({ok:false,msg:"목록 로드 실패"});}finally{setLw(false);}},[draft.webllmModel]);useEffect(()=>{if(draft.backend==="ollama")refreshO();if(draft.backend==="webllm")refreshW();/*eslint-disable-next-line*/},[draft.backend]);const test=async()=>{setTesting(true);setTr(null);try{if(draft.backend==="ollama"){const o=await callOllama({url:draft.ollamaUrl,model:draft.ollamaModel,messages:[{role:"user",content:"한국어로 OK만"}],maxTokens:10});setTr({ok:true,msg:"응답: "+(o||"").slice(0,20)});}else if(draft.backend==="webllm")setTr(hasWebGPU()?{ok:true,msg:"WebGPU 지원 ✓"}:{ok:false,msg:"WebGPU 미지원"});else if(draft.backend==="api"){await callClaude({apiKey:draft.apiKey,model:draft.model,maxTokens:16,messages:[{role:"user",content:"ping"}]});setTr({ok:true,msg:"연결 성공!"});}else setTr({ok:true,msg:"수동 모드 바로 사용 가능"});}catch(e){setTr({ok:false,msg:e.message});}finally{setTesting(false);}};return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={onClose}><Card className="max-h-[90vh] w-full max-w-lg overflow-y-auto p-6 shadow-pop fade-in"><div onClick={e=>e.stopPropagation()}><div className="mb-5 flex items-center justify-between"><h3 className="text-lg font-bold text-ink">설정 · AI 엔진</h3><button className="text-slate-400 hover:text-ink" onClick={onClose}>✕</button></div><div className="space-y-5"><div><div className="mb-2 text-sm font-semibold text-ink">AI 엔진 <span className="font-normal text-slate-400">(무료 우선 · 모든 탭 공유)</span></div><div className="grid grid-cols-2 gap-2">{BACKENDS.map(b=><button key={b.id} onClick={()=>{setDraft(d=>({...d,backend:b.id}));setTr(null);}} className={cx("rounded-xl border p-3 text-left transition",draft.backend===b.id?"border-brand bg-brand-light":"border-hair hover:border-slate-300")}><div className="text-[13px] font-bold text-ink">{b.label}</div></button>)}</div><p className="mt-2 text-[13px] text-slate-400">{(BACKENDS.find(b=>b.id===draft.backend)||{}).desc}</p></div>{draft.backend==="webllm"&&<div className="space-y-3 rounded-xl bg-slate-50 p-4"><div className="text-[13px] font-semibold">{hasWebGPU()?<span className="text-emerald-600">WebGPU 지원됨 ✓</span>:<span className="text-rose-600">WebGPU 미지원 — Chrome/Edge/웨일 최신 버전</span>}</div><Field label="모델"><div className="flex gap-2"><select value={draft.webllmModel} onChange={e=>setDraft({...draft,webllmModel:e.target.value})} className={cx(inputVisual,"min-w-0 flex-1")}>{(wm.length?wm:[draft.webllmModel]).map(m=><option key={m} value={m}>{m}</option>)}</select><Btn variant="outline" size="sm" onClick={refreshW} disabled={lw}>{lw?<Spinner size={14}/>:"↻"}</Btn></div></Field></div>}{draft.backend==="ollama"&&<div className="space-y-3 rounded-xl bg-slate-50 p-4"><Field label="Ollama 주소"><input className={inputCls} value={draft.ollamaUrl} onChange={e=>setDraft({...draft,ollamaUrl:e.target.value.trim()})}/></Field><Field label="모델"><div className="flex gap-2"><select value={draft.ollamaModel} onChange={e=>setDraft({...draft,ollamaModel:e.target.value})} className={cx(inputVisual,"min-w-0 flex-1")}>{!om.length&&<option value="">— 없음 —</option>}{om.map(m=><option key={m} value={m}>{m}</option>)}</select><Btn variant="outline" size="sm" onClick={refreshO} disabled={lo}>{lo?<Spinner size={14}/>:"↻"}</Btn></div></Field><p className="text-[13px] text-slate-500"><b>start-ollama.bat</b> 실행 후 모델: <code className="rounded bg-white px-1">ollama pull exaone3.5:7.8b</code></p></div>}{draft.backend==="manual"&&<div className="rounded-xl bg-slate-50 p-4 text-[13px] text-slate-600">설치·키 없이 무료. 실행 때 <b>프롬프트 창</b>이 뜨면 복사 → 챗봇에 붙여넣고 답을 다시 붙여넣으세요. (전사·임베딩은 브라우저에서 자동) 대량 작업은 Ollama·API 권장.</div>}{draft.backend==="api"&&<div className="space-y-3 rounded-xl bg-slate-50 p-4"><Field label="Anthropic API 키"><input type="password" className={inputCls} value={draft.apiKey} placeholder="sk-ant-..." onChange={e=>setDraft({...draft,apiKey:e.target.value.trim()})}/></Field><Field label="모델"><select value={draft.model} onChange={e=>setDraft({...draft,model:e.target.value})} className={inputCls}>{MODELS.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select></Field><a href="https://console.anthropic.com/settings/keys" target="_blank" className="text-[13px] text-brand-hover underline">키 발급 ↗</a></div>}<div className="flex items-center gap-3"><Btn variant="outline" size="sm" onClick={test} disabled={testing}>{testing?<Spinner size={14}/>:"🔌"} 연결 테스트</Btn>{tr&&<span className={cx("text-sm",tr.ok?"text-brand-hover":"text-rose-600")}>{tr.msg}</span>}</div></div><div className="mt-6 flex justify-end gap-2"><Btn variant="ghost" onClick={onClose}>취소</Btn><Btn onClick={()=>onSave(draft)}>저장</Btn></div></div></Card></div>;}
+
+/* ============================================================
+   ① 인터뷰 전사·요약 패널
+   ============================================================ */
+const SPK_PALETTE=["bg-brand-light text-brand-hover","bg-emerald-100 text-emerald-700","bg-amber-100 text-amber-700","bg-rose-100 text-rose-600","bg-sky-100 text-sky-700","bg-violet-100 text-violet-700"];
+function AudioCard({f,onDel,onTranscribe,busy,curModel}){
+  const ref=useRef(null);const[rate,setRate]=useState(1);
+  const spd=(r)=>{setRate(r);if(ref.current)ref.current.playbackRate=r;};
+  return <div className="rounded-xl border border-hair bg-white p-3">
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold text-ink"><span>🎵</span><span className="truncate">{f.name}</span></div>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <a href={f.url} download={f.name} title="원본 파일 저장" className="inline-flex items-center gap-1 rounded-lg border border-hair px-2 py-1 text-[12px] font-semibold text-slate-500 hover:bg-slate-100">⬇ 다운로드</a>
+        <button onClick={()=>onDel(f.id)} title="삭제" className="rounded-lg px-2 py-1 text-[14px] text-slate-400 hover:bg-rose-50 hover:text-rose-500">🗑</button>
+      </div>
+    </div>
+    <audio ref={ref} src={f.url} controls controlsList="nodownload noplaybackrate" preload="metadata" className="mt-2 h-9 w-full"/>
+    <div className="mt-2 flex flex-wrap items-center gap-1.5"><span className="text-[12px] text-slate-400">재생속도</span>{[0.75,1,1.25,1.5,2].map(r=><button key={r} onClick={()=>spd(r)} className={cx("rounded px-1.5 py-0.5 text-[12px] font-semibold",rate===r?"bg-brand text-white":"bg-slate-100 text-slate-600 hover:bg-slate-200")}>{r}×</button>)}<div className="min-w-[8px] flex-1"/><Btn size="sm" onClick={()=>onTranscribe(f)} disabled={busy}>📝 이 파일 텍스트화 <span className="font-normal opacity-70">· {curModel}</span></Btn></div>
+  </div>;
+}
+function InterviewPanel({settings,openSettings,toast}){
+  const K="uxax_p1a1_v1";const sv=load(K,{});
+  const[ctx,setCtx]=useState(sv.ctx||"");const[files,setFiles]=useState([]);const[segments,setSegments]=useState(sv.segments||[]);const[transMeta,setTransMeta]=useState(sv.transMeta||null);const[curUrl,setCurUrl]=useState(null);const[summary,setSummary]=useState(sv.summary||null);const[rawSummary,setRawSummary]=useState("");
+  const[whisperModel,setWhisperModel]=useState(sv.whisperModel||((window.UXAX&&UXAX.WHISPER_BEST)||WHISPER_MODELS[1].id));const[language,setLanguage]=useState(sv.language||"korean");
+  const[sttPhase,setSttPhase]=useState("");const[sttBusy,setSttBusy]=useState(false);const[sumBusy,setSumBusy]=useState(false);const[sttProg,setSttProg]=useState(0);const[dragOver,setDragOver]=useState(false);
+  const[pasteMode,setPasteMode]=useState(false);const[pasteText,setPasteText]=useState("");
+  const audioRef=useRef(null);
+  const projectBrief=loadBrief();
+  useEffect(()=>{save(K,{ctx,segments,summary,whisperModel,language,transMeta})},[ctx,segments,summary,whisperModel,language,transMeta]);
+  useEffect(()=>{if(!sv.ctx&&projectBrief){const c=briefToContext(projectBrief);if(c){setCtx(c);toast&&toast("info","프로젝트 정의 ‘"+briefName(projectBrief)+"’의 맥락을 자동으로 채웠어요");}}},[]);
+  const addFiles=(list)=>{const a2=[...list].filter(f=>f&&(/audio|video/.test(f.type)||/\.(mp3|wav|m4a|ogg|webm|mp4|aac|flac)$/i.test(f.name)));if(!a2.length){toast("error","오디오/영상 파일을 올려주세요");return;}setFiles(fs=>[...fs,...a2.map(f=>({id:uid("af"),name:f.name,file:f,url:URL.createObjectURL(f)}))]);toast("ok",a2.length+"개 파일 추가됨");};
+  const delFile=(id)=>setFiles(fs=>{const x=fs.find(f=>f.id===id);if(x&&x.url)URL.revokeObjectURL(x.url);return fs.filter(f=>f.id!==id);});
+  const onTranscribe=async(f)=>{
+    setSummary(null);setRawSummary("");setSttBusy(true);setSttPhase("준비 중…");setSttProg(0);
+    const t0=performance.now();
+    let dur=0; try{dur=await audioDuration(f.url);}catch(e){}
+    const est=Math.max(5,(dur||30)*(hasWebGPU()?0.9:2.6)); // 추정 총 소요(초) — 정확 ETA는 라이브러리 미제공
+    const timer=setInterval(()=>{const el=(performance.now()-t0)/1000;setSttProg(Math.min(0.96,el/est));},250);
+    try{const res=await transcribeFile(f.file,whisperModel,language,(p)=>setSttPhase(p));setSegments(res.chunks);setTransMeta({name:f.name,model:(WHISPER_MODELS.find(m=>m.id===whisperModel)||{}).label||whisperModel,ms:Math.round(performance.now()-t0)});setCurUrl(f.url);setSttProg(1);toast("ok","텍스트화 완료 · "+res.chunks.length+"구간");}
+    catch(e){toast("error","텍스트화 실패: "+(e.message||e));setSttPhase("");}
+    finally{clearInterval(timer);setSttBusy(false);}
+  };
+  const usePaste=()=>{const lines=pasteText.split(/\n+/).map(l=>l.trim()).filter(Boolean);const segs=lines.map(l=>{const m=/^\[?(\d+:\d+)\]?\s*(?:(화자\s*\d+|[^:：]{1,20})[:：])?\s*(.*)$/.exec(l);if(m&&m[3])return{id:uid("s"),start:parseTime(m[1])||0,end:0,text:m[3],speaker:m[2]?m[2].trim():""};return{id:uid("s"),start:0,end:0,text:l,speaker:""};});if(!segs.length){toast("error","내용이 비었어요");return;}setSegments(segs);setPasteMode(false);setCurUrl(null);setTransMeta({name:"(붙여넣은 텍스트)",model:"수동 입력",ms:0});setSummary(null);toast("ok",segs.length+"개 구간 불러옴");};
+  const setSeg=(id,k,v)=>setSegments(ss=>ss.map(s=>s.id===id?{...s,[k]:v}:s));
+  const speakers=Array.from(new Set(segments.map(s=>s.speaker).filter(Boolean)));
+  const seek=(t)=>{if(t==null||!audioRef.current)return;audioRef.current.currentTime=t;audioRef.current.play&&audioRef.current.play().catch(()=>{});};
+  const runSummary=async()=>{if(!segments.length){toast("error","먼저 텍스트화하거나 붙여넣으세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setSumBusy(true);setRawSummary("");setSummary(null);try{const out=await runLLM(settings,{system:SYS_RESEARCH,messages:[{role:"user",content:buildSummaryPrompt(segments,ctx)}],maxTokens:2600,stream:settings.backend!=="manual",onDelta:(f)=>setRawSummary(f),meta:{who:"인터뷰 요약"}});setRawSummary(out);const p=parseJsonLoose(out);if(p&&typeof p==="object")setSummary(p);else toast("info","요약은 받았지만 구조화 파싱 실패 — 원본 확인");toast("ok","요약 완료");}catch(e){toast("error","요약 실패: "+(e.message||e));}finally{setSumBusy(false);}};
+  const summaryMd=()=>{let md="# 인터뷰 요약 노트\n\n";if(summary?.summary)md+="## 전체 요약\n"+S(summary.summary)+"\n\n";if(summary?.themes?.length){md+="## 주제별 핵심\n";summary.themes.forEach(t=>{md+=`\n### #${S(t.tag)}\n`;arr(t.points).forEach(p=>md+=`- ${S(p)}\n`);});md+="\n";}if(summary?.quotes?.length){md+="## 핵심 인용\n";summary.quotes.forEach(q=>md+=`> "${S(q.text)}" — ${S(q.speaker)} ${q.timestamp?"("+S(q.timestamp)+")":""}\n\n`);}if(summary?.followups?.length){md+="## 후속 질문\n";summary.followups.forEach((f,i)=>md+=`${i+1}. ${S(f)}\n`);}md+="\n---\n\n## 텍스트화 원문\n";segments.forEach(s=>md+=`**[${fmtTime(s.start)}] ${s.speaker||""}** ${s.text}\n\n`);return md;};
+  const reset=()=>{if(!confirm("텍스트화·요약을 지울까요?"))return;setSegments([]);setSummary(null);setRawSummary("");setTransMeta(null);setCurUrl(null);};
+  return <div className="space-y-6">
+    <Guide
+      what="인터뷰 음성·영상을 텍스트로 바꾸고(텍스트화), 그 내용을 주제·핵심 인용·후속 질문으로 요약해요."
+      where="UX 1단계 ‘리서치’의 맨 앞 — 인터뷰 직후. 결과(요약·인용)는 P2 정의(어피니티·여정맵)의 재료가 됩니다."
+      why="전사·정리 1~2시간을 수 분으로. 인용을 타임스탬프와 함께 보존해 인사이트의 출처를 추적합니다."
+      inputs={[
+        {field:"리서치 맥락", desc:"이 인터뷰로 무엇을 알아보려는지 한두 줄. 목표를 적을수록 요약이 그 초점에 맞춰집니다.", ex:"중고거래 첫 거래를 망설이는 이유와 불안 요소를 파악"},
+        {field:"오디오/영상", desc:"실제 녹음. 잡음이 적고 또렷할수록 정확합니다. 여러 개 올려 모델별 품질을 비교할 수 있어요.", ex:"mp3·m4a·wav·오디오 포함 mp4"},
+        {field:"텍스트화 모델", desc:"한국어는 small 권장, 최고 정확도는 large-v3-turbo(최초 다운로드 큼·WebGPU). base/tiny는 빠르지만 한국어 약함. 모델을 바꿔 같은 파일을 다시 텍스트화하면 품질을 비교할 수 있어요.", ex:""},
+      ]}
+      tips={[
+        "브라우저 무료 모델은 한국어가 전용 서비스(예: 클로바)만큼은 아닙니다 — 정확도가 중요하면 clova·Purfview(로컬)로 텍스트화한 뒤 ‘붙여넣기’를 쓰세요.",
+        "화자 자동 분리는 미지원 — 화자 칸을 직접 채우면 요약 품질이 올라갑니다.",
+        "오디오·텍스트화 모두 브라우저 안에서 처리되어 데이터가 PC 밖으로 나가지 않습니다(API·업로드 없음).",
+      ]}/>
+    <Card className="p-6">
+      <div className="mb-4 flex items-center gap-1"><StepHead n={1} title="① 음성 텍스트화" sub="여러 파일을 올리고 모델을 골라 텍스트화 — 모델별 품질을 비교해 보세요" done={segments.length>0}/><HelpCue title="인터뷰 텍스트화·요약" faqs={INTERVIEW_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start">
+        <div className="shrink-0 pt-1 sm:w-48"><div className="text-[14px] font-semibold text-ink">리서치 맥락 <span className="font-normal text-slate-400">(선택)</span></div><div className="text-[12px] leading-snug text-slate-400">이 인터뷰에서 무엇을 알아보려는지 간단히 적어주세요. 넣을수록 요약이 그 목표에 집중됩니다.</div></div>
+        <div className="flex-1">
+          <textarea className={cx(inputCls,"min-h-[60px] w-full resize-y")} rows={2} value={ctx} onChange={e=>setCtx(e.target.value)} placeholder="예: 중고거래 첫 거래를 망설이는 이유와 불안 요소를 파악"/>
+          {projectBrief&&<div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px]"><span className="rounded-full bg-brand-faint px-2 py-0.5 font-semibold text-brand-hover">📋 프로젝트 정의 ‘{briefName(projectBrief)}’ 연결됨</span><button className="font-semibold text-brand-hover underline" onClick={()=>{const c=briefToContext(projectBrief);setCtx(c);toast&&toast("ok","프로젝트 정의에서 맥락을 다시 채웠어요");}}>맥락 다시 가져오기</button></div>}
+        </div>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-3">
+          <Field label="텍스트화 모델" hint="모델별 비교 가능"><select className={inputCls} value={whisperModel} onChange={e=>setWhisperModel(e.target.value)} disabled={sttBusy}>{WHISPER_MODELS.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select></Field>
+          <Field label="언어"><select className={inputCls} value={language} onChange={e=>setLanguage(e.target.value)} disabled={sttBusy}><option value="korean">한국어</option><option value="english">English</option><option value="japanese">日本語</option><option value="auto">자동 감지</option></select></Field>
+          {!hasWebGPU()&&<div className="text-[12px] text-amber-600">🐢 이 브라우저는 텍스트화가 느릴 수 있어요 — Chrome·Edge 권장</div>}
+        </div>
+        <label className={cx("flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center transition",dragOver?"scale-[1.01] border-brand bg-brand-light":"border-hair bg-brand-faint/40 hover:border-brand/40",sttBusy&&"pointer-events-none opacity-60")} onDragOver={e=>{e.preventDefault();if(!dragOver)setDragOver(true);}} onDragEnter={e=>{e.preventDefault();setDragOver(true);}} onDragLeave={e=>{e.preventDefault();setDragOver(false);}} onDrop={e=>{e.preventDefault();setDragOver(false);addFiles(e.dataTransfer.files);}}>
+          <div className="text-2xl">{dragOver?"📥":"🎙️"}</div><div className="mt-1 text-[14px] font-semibold text-ink">{dragOver?"여기에 놓으세요":"오디오/영상 끌어다 놓기 / 클릭"}</div><div className="mt-0.5 text-[12px] text-slate-400">여러 개 한꺼번에 OK · mp3·wav·m4a·mp4</div>
+          <input type="file" accept="audio/*,video/*" multiple className="hidden" onChange={e=>addFiles(e.target.files)}/>
+        </label>
+      </div>
+      {files.length>0&&<div className="mt-3 space-y-2">{files.map(f=><AudioCard key={f.id} f={f} onDel={delFile} onTranscribe={onTranscribe} busy={sttBusy} curModel={((WHISPER_MODELS.find(m=>m.id===whisperModel)||{}).label||"").split(" ·")[0]}/>)}</div>}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Btn size="sm" variant="outline" onClick={()=>{setCtx("중고거래 앱 첫 거래 불안 요인 인터뷰");const segs=DEMO_INTERVIEW.map((d,i)=>({id:uid("s"),start:i*18,end:0,text:d.text,speaker:d.spk}));setSegments(segs);setSummary(null);setRawSummary("");setTransMeta({name:"(예제 전사)",model:"예제",ms:0});setCurUrl(null);setPasteMode(false);toast("ok","예제 인터뷰 전사를 넣었어요 — 2단계 ‘AI 요약 생성’을 눌러보세요");}}>▶ 예제로 해보기</Btn>
+        <Btn size="sm" variant="outline" onClick={()=>setPasteMode(m=>!m)}>📋 이미 전사된 텍스트 붙여넣기</Btn>
+        {segments.length>0&&<Btn size="sm" variant="ghost" onClick={reset}>초기화</Btn>}
+      </div>
+      <div className="mt-1.5 text-[12px] text-slate-400">더 정확한 한국어가 필요하면 clova·Purfview(로컬)로 텍스트화한 뒤 위 ‘붙여넣기’로 넣고 요약만 쓰는 걸 권장해요.</div>
+      {pasteMode&&<div className="mt-3"><textarea className={cx(inputCls,"resize-y")} rows={6} value={pasteText} onChange={e=>setPasteText(e.target.value)} placeholder={"줄마다 한 발화.\n[00:12] 화자 1: 처음엔 좀 불안했어요\n[00:20] 화자 2: 어떤 점이요?"}/><div className="mt-2"><Btn size="sm" onClick={usePaste}>이 텍스트 사용</Btn></div></div>}
+      {sttBusy&&<div className="mt-4 rounded-xl bg-brand-light px-4 py-3">
+        <div className="flex items-center justify-between text-[13px] font-semibold text-brand-hover"><span className="flex items-center gap-2"><Spinner size={14}/>{sttPhase||"처리 중…"}</span><span>{Math.round(sttProg*100)}%</span></div>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/70"><div className="h-full rounded-full bg-brand transition-all duration-300" style={{width:Math.max(3,sttProg*100)+"%"}}/></div>
+        <div className="mt-1.5 text-[11px] text-slate-500">오디오 길이에 비례해요(대략). 처음 한 번은 모델을 받느라 더 걸릴 수 있어요 — 창을 닫지 말고 기다려 주세요.</div>
+      </div>}
+    </Card>
+    {segments.length>0&&<Card className="p-6 fade-in">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <StepHead n={2} title="② 텍스트화 결과" sub={transMeta?(transMeta.name+" · "+segments.length+"구간"+(transMeta.ms?(" · "+(transMeta.ms/1000).toFixed(1)+"초"):"")):"타임스탬프 클릭=재생 · 화자·문장 직접 수정"} done={!!summary}/>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Btn size="sm" variant="outline" onClick={()=>copyText(segments.map(s=>`[${fmtTime(s.start)}] ${s.speaker?s.speaker+": ":""}${s.text}`).join("\n")).then(()=>toast("ok","원문 복사됨"))}>📋 원문 복사</Btn>
+          <Btn size="sm" onClick={runSummary} disabled={sumBusy}>{sumBusy?<Spinner size={14}/>:"✨"} AI 요약 생성 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn>
+        </div>
+      </div>
+      {transMeta&&transMeta.model!=="수동 입력"&&transMeta.model!=="예제"&&<div className="mt-2 rounded-lg bg-brand-faint px-3 py-2 text-[12px] text-slate-500">🔬 <b className="text-brand-hover">모델 비교:</b> 위에서 모델을 바꿔 같은 파일을 다시 텍스트화하면 이 결과가 갱신돼요 (현재 <b>{transMeta.model}</b>).</div>}
+      {curUrl&&<audio ref={audioRef} src={curUrl} controls controlsList="nodownload" className="mt-3 h-9 w-full"/>}
+      <div className="mt-3 max-h-[460px] space-y-0.5 overflow-y-auto rounded-xl border border-hair bg-slate-50/40 p-3">
+        {segments.map((s,i)=>{const newSpk=i===0||segments[i-1].speaker!==s.speaker;const ci=Math.max(0,speakers.indexOf(s.speaker||"화자 1"));return <div key={s.id} className={newSpk&&i>0?"mt-3":""}>
+          {newSpk&&<div className="mb-1"><input className={cx("w-32 rounded-md px-2 py-0.5 text-[12px] font-bold focus:outline-none focus:ring-2 focus:ring-brand/30",SPK_PALETTE[ci%SPK_PALETTE.length])} value={s.speaker||""} placeholder="화자" onChange={e=>setSeg(s.id,"speaker",e.target.value)} list="spk"/></div>}
+          <div className="flex items-start gap-2 pl-1">
+            <button className="mt-1.5 shrink-0 rounded text-[11px] font-semibold text-slate-400 hover:text-brand-hover" onClick={()=>seek(s.start)} title="이 부분 재생">▶{fmtTime(s.start)}</button>
+            <textarea rows={Math.max(1,Math.ceil((s.text||"").length/46))} className="min-w-0 flex-1 resize-y rounded-lg border border-transparent bg-transparent px-2 py-1 text-[15px] leading-relaxed text-ink hover:bg-white focus:border-hair focus:bg-white" value={s.text} onChange={e=>setSeg(s.id,"text",e.target.value)}/>
+          </div>
+        </div>;})}
+      </div>
+      <datalist id="spk">{speakers.map(s=><option key={s} value={s}/>)}<option value="화자 1"/><option value="화자 2"/><option value="진행자"/><option value="참가자"/></datalist>
+    </Card>}
+    {summary&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ 요약 끝! 이 결과로 다음 단계 →</span>
+      <Btn size="sm" onClick={()=>{const md=summaryMd();wsAdd("인터뷰 요약 노트",md);if(window.UXAX)UXAX.setSlot("P1.interview",{data:{segments,summary},md,meta:{model:transMeta&&transMeta.model}});toast("ok","보관함 저장 완료 — P2에서 📥 가져오기로 이어가세요");setTimeout(()=>{location.href="./P2_정의스튜디오.html#affinity";},1000);}}>📤 저장하고 P2 정의(어피니티)로 →</Btn>
+      <HelpCue title="왜 다음이 정의(P2)인가요?" faqs={[{q:"인터뷰 다음은 뭐예요?",a:"여러 인터뷰의 발언·관찰을 비슷한 것끼리 묶어 ‘무엇이 진짜 문제인지’ 정의하는 단계(P2)예요. 이 요약 노트가 어피니티의 재료가 됩니다."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+    {(rawSummary||summary)&&<Card className="p-6 fade-in">
+      <div className="mb-4 flex items-center justify-between gap-2"><StepHead n={3} title="요약 노트" sub="주제·인용·후속 질문" done={!!summary}/>{!sumBusy&&summary&&<div className="flex flex-wrap gap-2"><WsSave title="인터뷰 요약 노트" getText={summaryMd} toast={toast}/><Btn size="sm" variant="outline" onClick={()=>download((((transMeta&&transMeta.name)||"interview").replace(/[^\w가-힣]+/g,"_"))+"_요약.md",summaryMd())}>↧ MD</Btn><Btn size="sm" variant="soft" onClick={()=>copyText(summaryMd()).then(()=>toast("ok","복사됨 — 다음 단계 입력으로"))}>→ 복사</Btn></div>}</div>
+      {summary?<div className="space-y-6">
+        {summary.summary&&<div><div className="mb-1.5 text-[12px] font-bold uppercase tracking-wide text-slate-400">전체 요약</div><p className="text-[15px] leading-relaxed text-ink">{S(summary.summary)}</p></div>}
+        {!!(summary.themes||[]).length&&<div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">주제별 핵심</div><div className="grid gap-3 sm:grid-cols-2">{summary.themes.map((t,i)=><Card key={i} className="p-4"><div className="font-bold text-ink">#{S(t.tag)}</div><ul className="mt-1.5 space-y-1 text-[14px] text-slate-600">{arr(t.points).map((p,j)=><li key={j}>· {S(p)}</li>)}</ul></Card>)}</div></div>}
+        {!!(summary.quotes||[]).length&&<div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">핵심 인용</div><div className="space-y-2">{summary.quotes.map((q,i)=><div key={i} className="rounded-xl border border-hair bg-brand-faint p-3"><div className="text-[15px] italic text-ink">"{S(q.text)}"</div><div className="mt-1 flex items-center gap-2 text-[12px] text-slate-400">{q.speaker&&<span>{S(q.speaker)}</span>}{q.timestamp&&<button className="font-semibold text-brand-hover hover:underline" onClick={()=>seek(parseTime(q.timestamp))}>▶ {S(q.timestamp)}</button>}</div></div>)}</div></div>}
+        {!!(summary.followups||[]).length&&<div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">후속 리서치 질문</div><ol className="ml-5 list-decimal space-y-1 text-[15px] text-ink">{summary.followups.map((f,i)=><li key={i}>{S(f)}</li>)}</ol></div>}
+      </div>:<div><div className="mb-2 text-[13px] text-slate-400">{sumBusy?"생성 중…":"원본 응답"}</div><pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{rawSummary}</pre></div>}
+    </Card>}
+  </div>;
+}
+
+/* ============================================================
+   ② 설문 개방형 코딩 패널
+   ============================================================ */
+function SurveyPanel({settings,openSettings,toast}){
+  const K="uxax_p1a2_v1";const sv=load(K,{});
+  const[rawRows,setRawRows]=useState(sv.rawRows||null);const[hasHeader,setHasHeader]=useState(sv.hasHeader!==undefined?sv.hasHeader:true);const[respCol,setRespCol]=useState(sv.respCol??0);const[idCol,setIdCol]=useState(sv.idCol??-1);const[hint,setHint]=useState(sv.hint||"");const[chunkSize,setChunkSize]=useState(sv.chunkSize||25);const[codebook,setCodebook]=useState(sv.codebook||null);const[coded,setCoded]=useState(sv.coded||null);const[busy,setBusy]=useState(false);const[phase,setPhase]=useState("");const[prog,setProg]=useState(0);
+  useEffect(()=>{save(K,{rawRows,hasHeader,respCol,idCol,hint,chunkSize,codebook,coded})},[rawRows,hasHeader,respCol,idCol,hint,chunkSize,codebook,coded]);
+  const onFile=(file)=>{if(!file)return;const r=new FileReader();r.onload=()=>{try{const rows=parseCSV(r.result);if(!rows.length){toast("error","빈 파일");return;}setRawRows(rows);setCodebook(null);setCoded(null);const start=hasHeader?1:0;const ncol=rows[0].length;let best=0,bl=-1;for(let c=0;c<ncol;c++){let t=0,n=0;for(let i=start;i<rows.length;i++){t+=(rows[i][c]||"").length;n++;}const avg=n?t/n:0;if(avg>bl){bl=avg;best=c;}}setRespCol(best);toast("ok",`${rows.length-(hasHeader?1:0)}행 불러옴`);}catch(e){toast("error","파싱 실패");}};r.readAsText(file);};
+  const onPaste=(text)=>{const lines=text.split(/\n/).map(l=>l.trim()).filter(Boolean);if(!lines.length)return;setRawRows(lines.map(l=>[l]));setHasHeader(false);setRespCol(0);setIdCol(-1);setCodebook(null);setCoded(null);toast("ok",lines.length+"개 응답 불러옴");};
+  const header=rawRows?(hasHeader?rawRows[0]:rawRows[0].map((_,i)=>"열 "+(i+1))):[];
+  const responses=useMemo(()=>{if(!rawRows)return [];const start=hasHeader?1:0;const out=[];for(let i=start;i<rawRows.length;i++){const text=(rawRows[i][respCol]||"").trim();if(!text)continue;const id=idCol>=0?(rawRows[i][idCol]||("r"+i)):("r"+(i-start+1));out.push({id:String(id),text});}return out;},[rawRows,hasHeader,respCol,idCol]);
+  const run=async()=>{if(!responses.length){toast("error","응답이 없어요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setCoded(null);setProg(0);try{setPhase("코드북 생성 중…");let cb=codebook;if(!cb){const sample=responses.slice(0,Math.min(60,responses.length)).map(r=>r.text);const out=await runLLM(settings,{system:SYS_RESEARCH,messages:[{role:"user",content:buildCodebookPrompt(sample,hint)}],maxTokens:1500,stream:false,meta:{who:"코드북 생성"}});const p=parseJsonLoose(out);cb=(p&&p.codebook)||[];if(!cb.length)throw new Error("코드북 생성 실패");setCodebook(cb);}const result=[];const chunks=[];for(let i=0;i<responses.length;i+=chunkSize)chunks.push(responses.slice(i,i+chunkSize));for(let ci=0;ci<chunks.length;ci++){setPhase(`응답 코딩 중… (${ci+1}/${chunks.length} 배치)`);setProg(ci/chunks.length);const out=await runLLM(settings,{system:SYS_RESEARCH,messages:[{role:"user",content:buildCodingPrompt(cb,chunks[ci])}],maxTokens:2600,stream:false,meta:{who:`코딩 ${ci+1}/${chunks.length}`}});const p=parseJsonLoose(out);const list=(p&&p.coded)||[];const byId={};list.forEach(x=>{if(x&&x.id!=null)byId[String(x.id)]=x;});chunks[ci].forEach(r=>{const c=byId[r.id]||{};const cs=arr(c.codes).map(S).filter(Boolean);const se=(c.sentiment==="pos"||c.sentiment==="neu"||c.sentiment==="neg")?c.sentiment:"neu";result.push({id:r.id,text:r.text,codes:cs,sentiment:se});});setCoded([...result]);}setProg(1);setPhase("");setCoded(result);toast("ok",`${result.length}건 코딩 완료`);}catch(e){toast("error","코딩 실패: "+(e.message||e));setPhase("");}finally{setBusy(false);}};
+  const agg=useMemo(()=>{if(!coded)return null;const codes={};const sent={pos:0,neu:0,neg:0};const ex={};coded.forEach(r=>{(r.codes||[]).forEach(c=>{codes[c]=(codes[c]||0)+1;if(!ex[c])ex[c]=r.text;});sent[r.sentiment]=(sent[r.sentiment]||0)+1;});const codeArr=Object.entries(codes).map(([code,value])=>({code,value,example:ex[code]})).sort((a,b)=>b.value-a.value);return{codeArr,sent,total:coded.length};},[coded]);
+  const exportCsv=()=>{if(!coded)return;download("coded_responses.csv",toCSV([["id","response","codes","sentiment"],...coded.map(r=>[r.id,r.text,(r.codes||[]).join("; "),r.sentiment])]),"text/csv;charset=utf-8");};
+  return <div className="space-y-6">
+    <Guide defaultOpen={!rawRows}
+      what="설문의 자유서술(개방형) 응답을 AI가 ‘코드(반복되는 주제 라벨)’로 자동 분류하고, 응답마다 감성(긍/중/부)을 매겨 빈도표·차트로 만들어 주는 도구입니다. 정성 데이터를 정량적으로 다룰 수 있게 합니다."
+      where="P1 리서치 단계. 설문을 돌린 직후, 수백~수천 건의 ‘기타 의견’ 같은 자유응답을 분석할 때 씁니다. 결과는 P2 어피니티·HMW나 P3 우선순위의 근거로 이어집니다."
+      why="수작업 코딩은 시간이 많이 들고 분석가마다 기준이 달라집니다. AI가 코드북(분류 기준)을 먼저 만들고 그 기준으로 전체를 일관되게 코딩하므로, 빠르면서 재현 가능한 결과를 얻습니다."
+      inputs={[
+        {field:"응답 데이터(CSV/텍스트)", desc:"자유서술 응답 묶음. CSV면 가장 긴 텍스트 열을 응답 열로 자동 추정합니다.", ex:"‘배송이 느려요’, ‘앱이 직관적이라 좋아요’ … 한 줄에 한 응답"},
+        {field:"코딩 기준/관점 (선택)", desc:"어떤 렌즈로 분류할지 힌트. 비우면 AI가 알아서 코드북을 만들지만, 주면 더 일관됩니다.", ex:"배송·가격·UX·고객응대 관점으로 분류"},
+        {field:"배치 크기", desc:"한 번에 코딩할 응답 수. 작은 모델일수록 작게(10~15), 큰 모델/API는 25~40도 안정적.", ex:"25"},
+      ]}
+      steps={[
+        {t:"CSV 올리기 / 텍스트 붙여넣기",d:"파일을 올리면 가장 긴 텍스트 열을 응답 열로 자동 추정합니다."},
+        {t:"열 확인",d:"첫 행 헤더 여부, 응답 열, (선택) ID 열을 맞춥니다. 미리보기로 응답이 맞게 잡혔는지 확인."},
+        {t:"기준·배치 설정 후 실행",d:"코딩 관점(선택)과 배치 크기를 정하고 실행하면, 코드북을 자동 생성한 뒤 모든 응답을 일관되게 코딩합니다."},
+        {t:"결과 확인·내보내기",d:"코드별 빈도·감성 차트를 보고, 코딩 결과 CSV / 코드북 JSON으로 내보냅니다."},
+      ]}
+      tips={[
+        "응답이 수백 건이면 수동 모드는 배치마다 복붙해야 하니 Ollama·API를 권장합니다.",
+        "코드북이 마음에 안 들면 ‘코드북 다시 생성’으로 기준을 다시 잡을 수 있어요.",
+        "코드(주제)는 6~12개가 적당 — 너무 많으면 분석이 흩어지고, 너무 적으면 뭉뚱그려집니다.",
+      ]}/>
+    <Card className="p-6">
+      <div className="mb-3 flex items-center gap-1"><StepHead n={1} title="응답 데이터 입력" sub="CSV 또는 한 줄에 한 응답" done={!!rawRows}/><HelpCue title="설문 개방형 코딩" faqs={SURVEY_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div>
+      <div className="mb-3 flex flex-wrap items-center gap-2"><Btn size="sm" variant="outline" onClick={()=>{onPaste(DEMO_SURVEY);}}>▶ 예제로 해보기</Btn><span className="text-[12px] text-slate-400">예제 응답 12건으로 바로 체험</span></div>
+      <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-hair bg-brand-faint/40 px-6 py-8 text-center transition hover:border-brand/40" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();onFile(e.dataTransfer.files[0]);}}><div className="text-2xl">📄</div><div className="mt-2 text-[15px] font-semibold text-ink">CSV 끌어다 놓기 / 클릭</div><div className="mt-1 text-[13px] text-slate-400">.csv (따옴표 지원)</div><input type="file" accept=".csv,.tsv,.txt" className="hidden" onChange={e=>onFile(e.target.files[0])}/></label>
+      <details className="mt-3"><summary className="cursor-pointer text-[13px] font-semibold text-brand-hover">또는 텍스트 붙여넣기</summary><textarea className={cx(inputCls,"mt-2 resize-y")} rows={5} placeholder={"배송이 너무 느려요\n앱이 직관적이라 좋아요"} onBlur={e=>e.target.value.trim()&&onPaste(e.target.value)}/></details>
+      {rawRows&&<div className="mt-4 space-y-3 rounded-xl bg-slate-50 p-4"><label className="flex items-center gap-2 text-[14px]"><input type="checkbox" checked={hasHeader} onChange={e=>setHasHeader(e.target.checked)}/> 첫 행은 헤더</label><div className="grid gap-3 sm:grid-cols-2"><Field label="응답(자유서술) 열"><select className={inputCls} value={respCol} onChange={e=>setRespCol(+e.target.value)}>{header.map((h,i)=><option key={i} value={i}>{h||("열 "+(i+1))}</option>)}</select></Field><Field label="ID 열 (선택)"><select className={inputCls} value={idCol} onChange={e=>setIdCol(+e.target.value)}><option value={-1}>— 자동 번호 —</option>{header.map((h,i)=><option key={i} value={i}>{h||("열 "+(i+1))}</option>)}</select></Field></div><div className="text-[13px] text-slate-500">유효 응답 <b>{responses.length}</b>건 · 예: <span className="italic">"{(responses[0]?.text||"").slice(0,50)}"</span></div></div>}
+    </Card>
+    {rawRows&&<Card className="p-6">
+      <StepHead n={2} title="코딩 설정 & 실행" sub="코드북 자동 생성 → 배치 코딩" done={!!coded}/>
+      <div className="grid gap-3 sm:grid-cols-2"><Field label="코딩 기준/관점 (선택)" hint="코드북 품질↑"><input className={inputCls} value={hint} onChange={e=>setHint(e.target.value)} placeholder="예: 배송·가격·UX·응대 관점"/></Field><Field label="배치 크기" hint="한 번에 코딩할 수"><input type="number" min="5" max="50" className={inputCls} value={chunkSize} onChange={e=>setChunkSize(Math.max(5,Math.min(50,+e.target.value||25)))}/></Field></div>
+      {codebook&&<div className="mt-3 rounded-xl border border-hair p-3"><div className="mb-1 text-[12px] font-bold uppercase text-slate-400">코드북 ({codebook.length})</div><div className="flex flex-wrap gap-1.5">{codebook.map((c,i)=><Chip key={i} className="bg-brand-light text-brand-hover ring-brand/10" title={c.desc}>{c.code}</Chip>)}</div><button className="mt-2 text-[12px] text-slate-400 hover:underline" onClick={()=>setCodebook(null)}>코드북 다시 생성</button></div>}
+      <div className="mt-4 flex items-center gap-3"><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} {coded?"다시 코딩":"코딩 실행"} <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn><span className="text-[13px] text-slate-400">{responses.length}건 · 약 {Math.ceil(responses.length/chunkSize)}배치</span></div>
+      {busy&&<div className="mt-4"><div className="mb-1 flex items-center gap-2 text-[14px] font-semibold text-brand-hover"><Spinner size={14}/>{phase}</div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand transition-all" style={{width:Math.round(prog*100)+"%"}}/></div></div>}
+    </Card>}
+    {agg&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ 코딩 끝! 이 결과로 다음 단계 →</span>
+      <Btn size="sm" onClick={()=>{wsAdd("설문 코딩 요약","# 설문 개방형 코딩 요약\n\n## 코드별 빈도\n"+agg.codeArr.map(c=>"- "+c.code+": "+c.value+"건").join("\n")+"\n\n감성 — 긍정 "+agg.sent.pos+" / 중립 "+agg.sent.neu+" / 부정 "+agg.sent.neg);toast("ok","보관함 저장 완료 — P2에서 📥 가져오기로 이어가세요");setTimeout(()=>{location.href="./P2_정의스튜디오.html#affinity";},1000);}}>📤 저장하고 P2 정의(어피니티)로 →</Btn>
+      <HelpCue title="왜 다음이 정의(P2)인가요?" faqs={[{q:"코딩 결과 다음은요?",a:"코드(주제)별 빈도·감성이 ‘무엇부터 정의할지’의 근거가 돼요. P2 어피니티·HMW로 이어집니다."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+    {agg&&<Card className="p-6 fade-in">
+      <div className="mb-4 flex items-center justify-between gap-2"><StepHead n={3} title="결과 · 집계" sub={`${agg.total}건 코딩 완료`} done={true}/><div className="flex gap-2"><WsSave title="설문 코딩 요약" getText={()=>agg?("# 설문 개방형 코딩 요약\n\n## 코드별 빈도\n"+agg.codeArr.map(c=>"- "+c.code+": "+c.value+"건").join("\n")+"\n\n감성 — 긍정 "+agg.sent.pos+" / 중립 "+agg.sent.neu+" / 부정 "+agg.sent.neg):""} toast={toast}/><Btn size="sm" variant="outline" onClick={exportCsv}>↧ 코딩 CSV</Btn></div></div>
+      <div className="grid gap-6 lg:grid-cols-2"><div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">코드별 빈도</div><BarChart data={agg.codeArr.map(c=>({label:c.code,value:c.value}))}/></div><div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">감성 분포</div><div className="flex overflow-hidden rounded-xl">{[["pos","#10b981"],["neu","#94a3b8"],["neg","#f43f5e"]].map(([k,c])=>{const v=agg.sent[k]||0;const pct=agg.total?Math.round(v/agg.total*100):0;return <div key={k} className="flex h-10 items-center justify-center text-[12px] font-bold text-white" style={{width:pct+"%",background:c}}>{pct>8?pct+"%":""}</div>;})}</div><div className="mt-2 flex gap-3 text-[13px]"><SentChip s="pos"/> {agg.sent.pos} <SentChip s="neu"/> {agg.sent.neu} <SentChip s="neg"/> {agg.sent.neg}</div><div className="mt-4 text-[12px] font-bold uppercase tracking-wide text-slate-400">코드별 대표 응답</div><ul className="mt-1 space-y-1 text-[13px] text-slate-600">{agg.codeArr.slice(0,5).map((c,i)=><li key={i}><b className="text-brand-hover">{c.code}</b> · "{(c.example||"").slice(0,42)}"</li>)}</ul></div></div>
+      <details className="mt-5"><summary className="cursor-pointer text-[13px] font-semibold text-brand-hover">코딩된 응답 전체 ({coded.length})</summary><div className="mt-2 max-h-96 overflow-y-auto rounded-xl border border-hair"><table className="w-full text-[13px]"><thead className="sticky top-0 bg-slate-50"><tr><th className="p-2 text-left">응답</th><th className="p-2 text-left">코드</th><th className="p-2">감성</th></tr></thead><tbody>{coded.map((r,i)=><tr key={i} className="border-t border-hair"><td className="p-2 text-slate-700">{r.text}</td><td className="p-2"><div className="flex flex-wrap gap-1">{(r.codes||[]).map((c,j)=><Chip key={j}>{c}</Chip>)}</div></td><td className="p-2 text-center"><SentChip s={r.sentiment}/></td></tr>)}</tbody></table></div></details>
+    </Card>}
+  </div>;
+}
+
+/* ============================================================
+   ③ VOC 분석 패널
+   ============================================================ */
+function VocPanel({settings,openSettings,toast}){
+  const K="uxax_p1a3_v1";const sv=load(K,{});
+  const[reviewsText,setReviewsText]=useState(sv.reviewsText!=null?sv.reviewsText:(sv.reviews||[]).join("\n"));const reviews=reviewsText.split(/\n/).map(s=>s.trim()).filter(Boolean);const[k,setK]=useState(sv.k||8);const[clusters,setClusters]=useState(sv.clusters||null);const[priorities,setPriorities]=useState(sv.priorities||null);const[busy,setBusy]=useState(false);const[phase,setPhase]=useState("");const[prog,setProg]=useState(0);
+  useEffect(()=>{save(K,{reviewsText,k,clusters,priorities})},[reviewsText,k,clusters,priorities]);
+  const onFile=(file)=>{if(!file)return;const r=new FileReader();r.onload=()=>{try{const rows=parseCSV(r.result);let col=0,best=-1;for(let c=0;c<(rows[0]||[]).length;c++){let t=0,n=0;for(let i=1;i<rows.length;i++){t+=(rows[i][c]||"").length;n++;}if(n&&t/n>best){best=t/n;col=c;}}const list=rows.slice(1).map(rw=>(rw[col]||"").trim()).filter(Boolean);setReviewsText(list.join("\n"));setClusters(null);setPriorities(null);toast("ok",list.length+"건 리뷰 불러옴");}catch(e){toast("error","파싱 실패");}};r.readAsText(file);};
+  const run=async()=>{if(reviews.length<4){toast("error","리뷰 4건 이상 입력");return;}if(!backendReady(settings)){toast("error","라벨링용 AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setClusters(null);setPriorities(null);setProg(0);try{setPhase("리뷰 임베딩 계산 중… (브라우저 내 처리)");const vecs=await embedTexts(reviews,(p)=>setProg(p*0.6));setPhase("의미 군집화(k-means) 중…");const kk=Math.max(2,Math.min(k,Math.floor(reviews.length/2)||2));const{assign}=kmeans(vecs,kk);const groups={};assign.forEach((c,i)=>{(groups[c]=groups[c]||[]).push(reviews[i]);});const groupArr=Object.values(groups).sort((a,b)=>b.length-a.length);const out=[];for(let gi=0;gi<groupArr.length;gi++){setPhase(`군집 라벨링 중… (${gi+1}/${groupArr.length})`);setProg(0.6+0.35*(gi/groupArr.length));const members=groupArr[gi];const sample=members.slice(0,15);let label={topic:"군집 "+(gi+1),sentiment:"중립",summary:"",quotes:sample.slice(0,2)};try{const resp=await runLLM(settings,{system:SYS_RESEARCH,messages:[{role:"user",content:buildLabelPrompt(sample)}],maxTokens:800,stream:false,meta:{who:`군집 ${gi+1}/${groupArr.length} 라벨`}});const p=parseJsonLoose(resp);if(p&&typeof p==="object")label={topic:S(p.topic)||label.topic,sentiment:S(p.sentiment)||"중립",summary:S(p.summary),quotes:arr(p.quotes).map(S).slice(0,3)};}catch(e){}out.push({...label,size:members.length,members});setClusters([...out]);}setClusters(out);setPhase("개선 우선순위 도출 중…");setProg(0.97);try{const resp=await runLLM(settings,{system:SYS_RESEARCH,messages:[{role:"user",content:buildPriorityPrompt(out)}],maxTokens:1200,stream:false,meta:{who:"개선 우선순위"}});const p=parseJsonLoose(resp);setPriorities((p&&p.priorities)||null);}catch(e){}setProg(1);setPhase("");toast("ok",`${out.length}개 주제 군집 완료`);}catch(e){toast("error","분석 실패: "+(e.message||e));setPhase("");}finally{setBusy(false);}};
+  const total=clusters?clusters.reduce((s,c)=>s+c.size,0):0;
+  const COLORS=["#5e6ad2","#10b981","#f59e0b","#f43f5e","#0ea5e9","#8b5cf6","#14b8a6","#ec4899","#84cc16","#64748b"];
+  const exportJson=()=>download("voc_analysis.json",JSON.stringify({clusters:clusters?.map(c=>({topic:c.topic,sentiment:c.sentiment,size:c.size,summary:c.summary,quotes:c.quotes})),priorities},null,2),"application/json");
+  return <div className="space-y-6">
+    <Guide defaultOpen={!reviews.length}
+      what="앱스토어·커뮤니티·CS 등에 흩어진 대량 리뷰(VOC, 고객의 소리)를 ‘의미가 비슷한 것끼리’ 자동으로 묶어(클러스터링) 주제·감성·대표 인용·개선 우선순위로 정리하는 도구입니다. 묶는 작업은 브라우저의 임베딩+k-means가, 주제 라벨링은 AI가 합니다."
+      where="P1 리서치 단계의 ‘2차/행동 데이터’ 분석. 인터뷰처럼 직접 묻지 않아도, 이미 쌓인 사용자 목소리에서 페인포인트를 발견할 때 씁니다. 결과는 P2 정의(HMW)·P3 우선순위로 이어집니다."
+      why="흩어진 수백~수천 건을 사람이 다 읽기 어렵습니다. 의미 유사도로 자동 군집하면 ‘어떤 불만이 얼마나 많은지’가 정량적으로 보이고, 우선순위 높은 문제를 빠르게 찾습니다."
+      inputs={[
+        {field:"리뷰/VOC", desc:"분석할 리뷰 묶음(4건 이상). CSV면 가장 긴 텍스트 열을 자동 선택. 한 줄 = 한 리뷰.", ex:"별점·날짜 같은 메타데이터가 섞여도 OK(텍스트 열만 사용)"},
+        {field:"군집 수 (k)", desc:"보고 싶은 ‘주제 개수’ 느낌. 데이터가 적은데 k가 크면 잘게 쪼개집니다. 보통 6~10.", ex:"리뷰 200건 → k=8 정도"},
+      ]}
+      steps={[
+        {t:"리뷰 불러오기",d:"앱스토어·커뮤니티·CS 등 흩어진 리뷰를 모아 올립니다(가장 긴 텍스트 열 자동 선택)."},
+        {t:"군집 수(k) 정하고 실행",d:"비슷한 의미의 리뷰를 브라우저가 임베딩→k-means로 자동으로 묶고, AI가 각 묶음의 주제를 라벨링합니다."},
+        {t:"결과 해석",d:"주제 비중·감성·대표 인용을 보고, AI가 뽑은 개선 우선순위 Top을 확인합니다. JSON으로 내보냅니다."},
+      ]}
+      tips={[
+        "임베딩 모델은 최초 1회만 다운로드되고, AI 엔진은 군집 ‘라벨링’에만 씁니다(군집 자체는 무료·자동).",
+        "결과가 어색하면 k를 ±2 조정해 다시 돌려 보세요.",
+        "감성·비중은 ‘무엇부터 고칠지’의 객관적 출발점 — 최종 판단은 사람이.",
+      ]}/>
+    <Card className="p-6">
+      <div className="mb-3 flex items-center gap-1"><StepHead n={1} title="리뷰·VOC 입력" sub="임베딩·군집은 브라우저에서 자동 처리(무료)" done={reviews.length>0}/><HelpCue title="리뷰·VOC 분석" faqs={VOC_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div>
+      <div className="mb-3 flex flex-wrap items-center gap-2"><Btn size="sm" variant="outline" onClick={()=>{setReviewsText(DEMO_VOC);setClusters(null);setPriorities(null);toast("ok","예제 리뷰 12건을 채웠어요 — 아래 ‘분석 실행’을 눌러보세요");}}>▶ 예제로 해보기</Btn><span className="text-[12px] text-slate-400">처음이라 막막하면 예제로 한 번 돌려보세요</span></div>
+      <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-hair bg-brand-faint/40 px-6 py-8 text-center transition hover:border-brand/40" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();onFile(e.dataTransfer.files[0]);}}><div className="text-2xl">💬</div><div className="mt-2 text-[15px] font-semibold text-ink">리뷰 CSV 끌어다 놓기 / 클릭</div><input type="file" accept=".csv,.tsv,.txt" className="hidden" onChange={e=>onFile(e.target.files[0])}/></label>
+      <details className="mt-3" open={!reviews.length}><summary className="cursor-pointer text-[13px] font-semibold text-brand-hover">또는 텍스트 붙여넣기</summary><textarea className={cx(inputCls,"mt-2 resize-y")} rows={6} placeholder={"리뷰를 한 줄에 하나씩…"} value={reviewsText} onChange={e=>{setReviewsText(e.target.value);setClusters(null);setPriorities(null);}}/></details>
+      {reviews.length>0&&<div className="mt-3 text-[13px] text-slate-500">불러온 리뷰 <b>{reviews.length}</b>건</div>}
+    </Card>
+    {reviews.length>0&&<Card className="p-6">
+      <StepHead n={2} title="군집 분석 실행" sub="의미가 비슷한 리뷰를 자동으로 묶고 주제 라벨링" done={!!clusters}/>
+      <div className="flex flex-wrap items-end gap-4"><Field label="군집 수 (k)" hint="주제 개수"><input type="number" min="2" max="16" className={cx(inputVisual,"w-28")} value={k} onChange={e=>setK(Math.max(2,Math.min(16,+e.target.value||8)))}/></Field><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 분석 실행</Btn><span className="text-[13px] text-slate-400">{hasWebGPU()?"⚡ WebGPU":"🐢 WASM"} · 라벨링 {backendLabel(settings)}</span></div>
+      {busy&&<div className="mt-4"><div className="mb-1 flex items-center gap-2 text-[14px] font-semibold text-brand-hover"><Spinner size={14}/>{phase}</div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand transition-all" style={{width:Math.round(prog*100)+"%"}}/></div></div>}
+    </Card>}
+    {clusters&&<Card className="p-6 fade-in">
+      <div className="mb-4 flex items-center justify-between gap-2"><StepHead n={3} title="결과 · 주제 군집" sub={`${clusters.length}개 주제 · ${total}건`} done={true}/><div className="flex gap-2"><WsSave title="VOC 분석" getText={()=>clusters?("# VOC 분석\n\n"+clusters.map(c=>"## "+S(c.topic)+" ("+c.size+"건/"+S(c.sentiment)+")\n"+S(c.summary)).join("\n\n")+(priorities?("\n\n## 개선 우선순위\n"+priorities.map((p,i)=>(i+1)+". "+S(p.title)).join("\n")):"")):""} toast={toast}/><Btn size="sm" variant="outline" onClick={exportJson}>↧ JSON</Btn></div></div>
+      <div className="mb-5"><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">주제별 비중</div><div className="flex overflow-hidden rounded-xl">{clusters.map((c,i)=>{const pct=total?Math.round(c.size/total*100):0;return <div key={i} className="flex h-9 items-center justify-center text-[11px] font-bold text-white" style={{width:pct+"%",background:COLORS[i%COLORS.length]}}>{pct>7?pct+"%":""}</div>;})}</div></div>
+      <div className="grid gap-3 md:grid-cols-2">{clusters.map((c,i)=><Card key={i} className="p-4"><div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full" style={{background:COLORS[i%COLORS.length]}}/><span className="font-bold text-ink">{c.topic}</span></div><div className="flex items-center gap-1.5"><SentChip s={c.sentiment}/><Chip>{c.size}건</Chip></div></div>{c.summary&&<div className="mt-1.5 text-[13px] text-slate-500">{c.summary}</div>}<ul className="mt-2 space-y-1 text-[13px] italic text-slate-500">{arr(c.quotes).map((q,j)=><li key={j}>"{S(q)}"</li>)}</ul></Card>)}</div>
+      {priorities&&<div className="mt-6"><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">개선 우선순위</div><div className="space-y-2">{priorities.map((p,i)=><div key={i} className="flex items-start gap-3 rounded-xl border border-hair p-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-[12px] font-bold text-white">{i+1}</span><div><div className="font-semibold text-ink">{S(p.title)} {p.impact&&<Chip className="ml-1">{S(p.impact)}</Chip>}</div><div className="text-[13px] text-slate-500">{S(p.why)}</div></div></div>)}</div></div>}
+    </Card>}
+    {clusters&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ 분석 끝! 이 결과로 다음 단계 →</span>
+      <Btn size="sm" onClick={()=>{const t="# VOC 분석\n\n"+clusters.map(c=>"## "+S(c.topic)+" ("+c.size+"건/"+S(c.sentiment)+")\n"+S(c.summary)).join("\n\n")+(priorities?("\n\n## 개선 우선순위\n"+priorities.map((p,i)=>(i+1)+". "+S(p.title)).join("\n")):"");wsAdd("VOC 분석",t);toast("ok","보관함 저장 완료 — P2에서 📥 가져오기로 이어가세요");setTimeout(()=>{location.href="./P2_정의스튜디오.html#hmw";},1000);}}>📤 저장하고 P2 정의(HMW)로 →</Btn>
+      <a href="./P3_아이디에이션스튜디오.html#priority" className="text-[13px] text-brand-hover underline">또는 P3 우선순위로</a>
+      <HelpCue title="다음 단계가 왜 P2 정의인가요?" faqs={[{q:"왜 VOC 다음이 정의(P2)인가요?",a:"리서치에서 찾은 사용자 문제를, ‘무엇을 풀지’ 한 문장으로 좁히는 단계가 정의(P2)예요. VOC에서 나온 페인포인트가 HMW(How Might We) 질문의 재료가 됩니다."},{q:"꼭 순서대로 해야 하나요?",a:"학습용으로는 순서대로(P1→P2→…) 한 번 완주해 보는 걸 권해요. 익숙해지면 필요한 단계만 골라 써도 돼요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+  </div>;
+}
+
+/* ============================================================
+   ④ 데스크 리서치 합성 패널 (PDF 추출 + RAG)
+   ============================================================ */
+function DeskPanel({settings,openSettings,toast}){
+  const K="uxax_p1a4_v1";const sv=load(K,{});
+  const[sources,setSources]=useState(sv.sources||[]);const[question,setQuestion]=useState(sv.question||"");const[topK,setTopK]=useState(sv.topK||10);const[result,setResult]=useState(sv.result||null);const[busy,setBusy]=useState(false);const[phase,setPhase]=useState("");
+  useEffect(()=>{save(K,{sources,question,topK,result})},[sources,question,topK,result]);
+  const addPdf=async(files)=>{setBusy(true);for(const f of files){if(!f)continue;try{setPhase("PDF 추출: "+f.name);const txt=await extractPdfText(f,()=>{});if(txt.length<20){toast("error",f.name+": 텍스트가 거의 없어요(스캔 PDF는 추출 불가)");continue;}setSources(s=>[...s,{id:uid("src"),name:f.name,text:txt}]);toast("ok",f.name+" 추출 완료 ("+txt.length+"자)");}catch(e){toast("error",f.name+" 추출 실패: "+(e.message||e));}}setBusy(false);setPhase("");};
+  const addText=()=>{const name=prompt("출처 이름(예: 2024 시장보고서)");if(name==null)return;setSources(s=>[...s,{id:uid("src"),name:name||("출처 "+(s.length+1)),text:""}]);};
+  const setSrc=(id,k,v)=>setSources(s=>s.map(x=>x.id===id?{...x,[k]:v}:x));
+  const delSrc=(id)=>setSources(s=>s.filter(x=>x.id!==id));
+  const run=async()=>{const valid=sources.filter(s=>(s.text||"").trim().length>40);if(!valid.length){toast("error","텍스트가 있는 자료가 없어요");return;}if(!question.trim()){toast("error","리서치 질문을 입력하세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setResult(null);try{setPhase("문서 청킹·임베딩 중…");const chunks=[];valid.forEach((s,si)=>chunkText(s.text).forEach(c=>chunks.push({si,name:s.name,text:c})));if(!chunks.length)throw new Error("청크 생성 실패");const vecs=await embedTexts(chunks.map(c=>c.text),()=>{});const qvs=await embedTexts([question]);const qv=qvs[0];setPhase("관련 구절 검색(RAG) 중…");const scored=chunks.map((c,i)=>({...c,score:dot(qv,vecs[i])})).sort((a,b)=>b.score-a.score).slice(0,Math.max(4,Math.min(topK,chunks.length)));const ctxStr=scored.map(c=>`[S${c.si+1}] (${c.name})\n${c.text}`).join("\n\n");setPhase("브리프 합성 중…");const out=await runLLM(settings,{system:SYS_RESEARCH,messages:[{role:"user",content:buildDeskPrompt(question,ctxStr)}],maxTokens:2600,stream:false,meta:{who:"데스크 리서치 합성"}});const p=parseJsonLoose(out);setResult(p&&typeof p==="object"?{...p,sources:valid.map((s,i)=>({tag:"S"+(i+1),name:s.name}))}:{raw:out});toast("ok","리서치 브리프 완료");}catch(e){toast("error","합성 실패: "+(e.message||e));}finally{setBusy(false);setPhase("");}};
+  const briefMd=()=>{if(!result)return "";let md="# 리서치 브리프\n\n**질문:** "+question+"\n\n";if(result.findings){md+="## 핵심 발견\n";result.findings.forEach(f=>md+=`- ${S(f.claim)} ${S(f.source)}\n`);md+="\n";}if(result.comparison)md+="## 자료 간 비교\n"+S(result.comparison)+"\n\n";if(result.gaps){md+="## 데이터 공백\n";arr(result.gaps).forEach(g=>md+=`- ${S(g)}\n`);}return md;};
+  return <div className="space-y-6">
+    <Guide defaultOpen={!sources.length}
+      what="보고서·논문·웹자료 등 2차 자료(PDF/텍스트)를 모아, 특정 리서치 질문에 대해 ‘출처가 연결된 리서치 브리프’를 만들어 주는 도구입니다. 자료를 잘게 나눠 임베딩한 뒤 질문과 가장 관련된 구절만 골라(RAG, 검색증강생성) 요약·비교합니다."
+      where="P1 리서치 단계의 ‘데스크 리서치(2차 조사)’. 사용자를 직접 만나기 전, 시장·선행연구·경쟁 보고서로 맥락을 잡을 때 씁니다. 결과는 인터뷰 가이드·페르소나·PRD의 배경 근거가 됩니다."
+      why="방대한 문헌을 다 읽는 데 드는 시간을 줄이면서, 모든 주장에 [출처]를 붙여 신뢰할 수 있게 합니다. 자료에 ‘없는 내용’은 지어내지 않고 데이터 공백으로 표시해 환각을 방지합니다."
+      inputs={[
+        {field:"자료(출처)", desc:"PDF를 올리면 본문 텍스트를 자동 추출(스캔 이미지 PDF는 불가). 또는 ‘+ 텍스트 출처’로 본문을 직접 붙여넣기. 출처마다 이름을 달아두면 인용 추적이 쉬움.", ex:"‘2024 중고거래 시장 보고서’, 경쟁사 리뷰 분석 PDF …"},
+        {field:"리서치 질문", desc:"이 자료들로 무엇을 답하고 싶은지 한 문장. 구체적일수록 관련 구절을 정확히 찾습니다.", ex:"비대면 중고거래에서 사용자가 느끼는 신뢰 장벽과 해소 방안은?"},
+        {field:"참고 구절 수(top-K)", desc:"질문과 가장 가까운 구절을 몇 개나 근거로 쓸지. 많으면 폭넓지만 산만, 적으면 좁고 정확.", ex:"8~12"},
+      ]}
+      steps={[
+        {t:"자료 추가",d:"PDF를 올리면 브라우저가 텍스트를 추출합니다(스캔 이미지 PDF는 불가). 또는 ‘+ 텍스트 출처’로 본문을 직접 붙여넣습니다."},
+        {t:"리서치 질문 입력",d:"이 자료들로 무엇을 알고 싶은지 한 문장으로."},
+        {t:"실행",d:"자료를 잘게 나눠 임베딩하고, 질문과 가장 관련된 구절만 골라(RAG) 출처가 연결된 브리프를 만듭니다."},
+        {t:"검토·내보내기",d:"각 발견의 [S#] 출처를 확인하고, 자료 간 비교·데이터 공백을 봅니다. MD로 내보냅니다."},
+      ]}
+      tips={[
+        "자료 안에 있는 내용만 근거로 합성합니다(환각 방지). 발견마다 [S#] 출처를 꼭 확인하세요.",
+        "웹 링크(URL)는 file://에서 막히므로, 페이지 본문을 복사해 텍스트 출처로 붙여넣으세요.",
+        "‘데이터 공백’은 추가로 직접 조사하거나 인터뷰로 확인할 항목입니다.",
+      ]}/>
+    <Card className="p-6">
+      <div className="mb-3 flex items-center gap-1"><StepHead n={1} title="자료 입력" sub="PDF 자동 추출 또는 텍스트 출처" done={sources.length>0}/><HelpCue title="데스크 리서치 합성" faqs={DESK_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div>
+      <div className="mb-3 flex flex-wrap items-center gap-2"><Btn size="sm" variant="outline" onClick={()=>{setSources([{id:uid("src"),name:"2024 중고거래 시장 보고서(예제)",text:DEMO_DESK_TEXT}]);setQuestion(DEMO_DESK_Q);setResult(null);toast("ok","예제 자료·질문을 넣었어요 — 2단계 ‘브리프 합성’을 눌러보세요");}}>▶ 예제로 해보기</Btn><span className="text-[12px] text-slate-400">PDF 없이 예제 자료로 바로 체험</span></div>
+      <div className="flex flex-wrap gap-2"><label className="cursor-pointer rounded-[10px] bg-brand-light px-4 py-2.5 text-sm font-semibold text-brand-hover hover:bg-[#e3e6f7]">📄 PDF 추가<input type="file" accept="application/pdf,.pdf" multiple className="hidden" onChange={e=>addPdf([...e.target.files])}/></label><Btn variant="outline" onClick={addText}>+ 텍스트 출처</Btn></div>
+      {busy&&phase&&<div className="mt-3 flex items-center gap-2 text-[13px] text-brand-hover"><Spinner size={14}/>{phase}</div>}
+      <div className="mt-4 space-y-2">{sources.map((s,i)=><div key={s.id} className="rounded-xl border border-hair p-3"><div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2 text-[14px] font-semibold text-ink"><Chip className="bg-brand-light text-brand-hover ring-brand/10">S{i+1}</Chip>{s.name} <span className="text-[12px] font-normal text-slate-400">{(s.text||"").length}자</span></div><button className="text-slate-300 hover:text-rose-500" onClick={()=>delSrc(s.id)}>✕</button></div><textarea className={cx(inputCls,"mt-2 resize-y text-[13px]")} rows={s.text?2:4} value={s.text} onChange={e=>setSrc(s.id,"text",e.target.value)} placeholder="여기에 자료 본문(또는 PDF 추출 텍스트)이 들어갑니다"/></div>)}{!sources.length&&<p className="rounded-xl bg-slate-50 p-3 text-[13px] text-slate-400">아직 자료가 없어요. PDF를 올리거나 텍스트 출처를 추가하세요.</p>}</div>
+    </Card>
+    {sources.length>0&&<Card className="p-6">
+      <StepHead n={2} title="질문 & 합성 실행" sub="RAG로 관련 구절만 골라 출처 연결 브리프 생성" done={!!result}/>
+      <Field label="리서치 질문"><input className={inputCls} value={question} onChange={e=>setQuestion(e.target.value)} placeholder="예: 비대면 거래의 신뢰 장벽과 해소 방안은?"/></Field>
+      <div className="mt-3 flex flex-wrap items-end gap-4"><Field label="참고 구절 수(top-K)" hint="많을수록 폭넓게"><input type="number" min="4" max="20" className={cx(inputVisual,"w-28")} value={topK} onChange={e=>setTopK(Math.max(4,Math.min(20,+e.target.value||10)))}/></Field><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 브리프 합성</Btn><span className="text-[13px] text-slate-400">{hasWebGPU()?"⚡ WebGPU":"🐢 WASM"} · {backendLabel(settings)}</span></div>
+      {busy&&phase&&<div className="mt-3 flex items-center gap-2 text-[14px] font-semibold text-brand-hover"><Spinner size={14}/>{phase}</div>}
+    </Card>}
+    {result&&result.findings&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ 브리프 끝! 이 결과로 다음 단계 →</span>
+      <Btn size="sm" onClick={()=>{wsAdd("데스크 리서치 브리프",briefMd());toast("ok","보관함 저장 완료 — P2에서 📥 가져오기로 이어가세요");setTimeout(()=>{location.href="./P2_정의스튜디오.html#hmw";},1000);}}>📤 저장하고 P2 정의(HMW)로 →</Btn>
+      <HelpCue title="브리프 다음 단계는?" faqs={[{q:"데스크 리서치 다음은요?",a:"여기서 잡은 배경·가설이 P2 정의의 HMW(How Might We)나 PRD(요구사항)의 근거가 돼요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+    {result&&<Card className="p-6 fade-in">
+      <div className="mb-4 flex items-center justify-between gap-2"><StepHead n={3} title="리서치 브리프" sub="출처 연결 발견 · 비교 · 공백" done={true}/>{result.findings&&<div className="flex gap-2"><WsSave title="데스크 리서치 브리프" getText={briefMd} toast={toast}/><Btn size="sm" variant="outline" onClick={()=>download("research_brief.md",briefMd())}>↧ MD</Btn></div>}</div>
+      {result.findings?<div className="space-y-5">
+        <div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">핵심 발견 (출처 연결)</div><div className="space-y-2">{result.findings.map((f,i)=><Card key={i} className="p-3"><div className="text-[15px] text-ink">{S(f.claim)}</div><div className="mt-1 text-[12px] font-semibold text-brand-hover">↳ {S(f.source)}</div></Card>)}</div></div>
+        {result.comparison&&<div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">자료 간 비교</div><p className="text-[15px] leading-relaxed text-slate-600">{S(result.comparison)}</p></div>}
+        {!!(result.gaps||[]).length&&<div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">데이터 공백</div><ul className="ml-5 list-disc space-y-1 text-[15px] text-slate-600">{result.gaps.map((g,i)=><li key={i}>{S(g)}</li>)}</ul></div>}
+        {result.sources&&<div className="text-[12px] text-slate-400">출처: {result.sources.map(s=>`[${s.tag}] ${s.name}`).join(" · ")}</div>}
+      </div>:<pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{result.raw}</pre>}
+    </Card>}
+  </div>;
+}
+
+/* ============================================================
+   ⑤ 인터뷰 가이드 초안 패널
+   ============================================================ */
+function GuidePanel({settings,openSettings,toast}){
+  const K="uxax_p1a5_v1";const sv=load(K,{});
+  const[goal,setGoal]=useState(sv.goal||"");const[participant,setParticipant]=useState(sv.participant||"");const[hyp,setHyp]=useState(sv.hyp||"");const[dur,setDur]=useState(sv.dur||60);const[guide,setGuide]=useState(sv.guide||null);const[busy,setBusy]=useState(false);
+  useEffect(()=>{save(K,{goal,participant,hyp,dur,guide})},[goal,participant,hyp,dur,guide]);
+  const run=async()=>{if(!goal.trim()){toast("error","리서치 목표를 입력하세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setGuide(null);try{const out=await runLLM(settings,{system:SYS_RESEARCH,messages:[{role:"user",content:buildGuidePrompt(goal,participant,hyp,dur)}],maxTokens:2200,stream:false,meta:{who:"인터뷰 가이드"}});const p=parseJsonLoose(out);setGuide(p&&p.sections?p:{raw:out});toast("ok","가이드 생성 완료");}catch(e){toast("error","생성 실패: "+(e.message||e));}finally{setBusy(false);}};
+  const guideMd=()=>{if(!guide||!guide.sections)return guide?.raw||"";let md="# 인터뷰 가이드\n";(guide.sections||[]).forEach(s=>{md+=`\n## ${S(s.name)}\n`;arr(s.questions).forEach((q,i)=>{const pr=arr(q.probes).map(S).filter(Boolean);md+=`${i+1}. ${S(q.q)}${pr.length?` (프로브: ${pr.join(" / ")})`:""}\n`;});});if(guide.time_plan)md+="\n## 시간 배분\n"+S(guide.time_plan)+"\n";return md;};
+  return <div className="space-y-6">
+    <Guide defaultOpen={!guide}
+      what="리서치 목표·대상·가설을 넣으면 1:1 사용자 인터뷰 질문지(도입→핵심→마무리 구조, 프로브·시간배분 포함)를 초안으로 만들어 주는 도구입니다. 유도/이중 질문을 자동으로 점검합니다."
+      where="P1 리서치 단계에서 인터뷰를 ‘하기 전’ 준비물. 이 가이드로 인터뷰를 진행하고, 그 녹음을 ①(전사·요약) 탭에서 정리하는 흐름입니다. 만든 가이드는 퍼소나 스튜디오에서도 불러와 AI 사용자에게 자동 인터뷰할 수 있습니다."
+      why="좋은 질문이 좋은 리서치를 만듭니다. 유도질문(원하는 답을 끌어내는 질문)을 피하고 개방형으로 구성해야 진짜 인사이트가 나오는데, AI가 그 기준을 반영한 초안을 빠르게 줍니다."
+      inputs={[
+        {field:"리서치 목표 (필수)", desc:"이 인터뷰로 무엇을 알아내려는지. 질문지 전체의 방향을 결정합니다.", ex:"첫 거래 전환을 막는 불안 요인과 그 맥락 파악"},
+        {field:"인터뷰 대상", desc:"누구를 인터뷰하는지. 대상의 상황·수준에 맞춰 질문 난이도·표현이 달라집니다.", ex:"가입 후 30일간 거래가 없는 신규 사용자"},
+        {field:"가설 (선택)", desc:"검증하고 싶은 가정. 넣으면 그 가설을 확인·반박할 질문이 포함됩니다(유도하지 않게 균형).", ex:"사기 뉴스 노출이 첫 거래를 망설이게 만들 것이다"},
+      ]}
+      steps={[
+        {t:"목표·대상 입력",d:"이 인터뷰로 무엇을 알고 싶은지, 누구를 인터뷰하는지 적습니다."},
+        {t:"생성 실행",d:"도입(라포)→핵심→마무리 구조로 개방형 질문·프로브(후속 질문)를 만들고 유도질문을 자동 점검합니다."},
+        {t:"검토·내보내기",d:"MD로 내보내면 퍼소나 스튜디오의 ‘인터뷰 가이드 → MD 불러오기’로 바로 쓸 수 있습니다."},
+      ]}
+      tips={[
+        "생성물은 초안 — 현장 맥락·용어에 맞게 다듬어 쓰세요.",
+        "‘유도질문·편향 점검’ 코멘트를 꼭 확인해 답을 미리 정해두는 질문을 제거하세요.",
+        "도입 질문으로 라포(긴장 완화)를 만들고, 민감한 질문은 뒤쪽에 배치하는 게 정석입니다.",
+      ]}/>
+    <Card className="p-6">
+      <div className="mb-3 flex items-center gap-1"><StepHead n={1} title="가이드 설정" sub="목표·대상·가설" done={!!guide}/><HelpCue title="인터뷰 가이드 초안" faqs={GUIDE_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div>
+      <div className="mb-3 flex flex-wrap items-center gap-2"><Btn size="sm" variant="outline" onClick={()=>{setGoal(DEMO_GUIDE.goal);setParticipant(DEMO_GUIDE.participant);setHyp(DEMO_GUIDE.hyp);setGuide(null);toast("ok","예제 설정을 넣었어요 — ‘가이드 생성’을 눌러보세요");}}>▶ 예제로 해보기</Btn><span className="text-[12px] text-slate-400">예제 목표·대상으로 바로 체험</span></div>
+      <div className="space-y-4">
+        <Field label="리서치 목표"><input className={inputCls} value={goal} onChange={e=>setGoal(e.target.value)} placeholder="예: 첫 거래 전환을 막는 불안 요인 파악"/></Field>
+        <div className="grid gap-3 sm:grid-cols-2"><Field label="인터뷰 대상"><input className={inputCls} value={participant} onChange={e=>setParticipant(e.target.value)} placeholder="예: 가입 후 미거래 사용자"/></Field><Field label="소요 시간(분)"><input type="number" min="15" max="120" className={inputCls} value={dur} onChange={e=>setDur(Math.max(15,Math.min(120,+e.target.value||60)))}/></Field></div>
+        <Field label="가설 (선택)"><textarea className={cx(inputCls,"resize-y")} rows={2} value={hyp} onChange={e=>setHyp(e.target.value)} placeholder="예: 사기 뉴스 노출이 첫 거래를 막을 것이다"/></Field>
+      </div>
+      <div className="mt-4"><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 가이드 생성 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn></div>
+    </Card>
+    {guide&&guide.sections&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ 가이드 완성! 이제 →</span>
+      <Btn size="sm" onClick={()=>{wsAdd("인터뷰 가이드",guideMd());toast("ok","보관함 저장 완료 — 이 가이드로 인터뷰한 뒤 ① 전사·요약 탭에서 정리하세요");}}>📤 보관함 저장</Btn>
+      <span className="text-[13px] text-slate-500">이 가이드로 인터뷰 → <b>① 전사·요약</b> 탭에서 정리</span>
+      <HelpCue title="가이드 다음은 뭐예요?" faqs={[{q:"가이드를 만들었으면?",a:"이 질문지로 실제 인터뷰를 진행하고, 그 녹음을 ① 전사·요약 탭에서 정리하면 돼요. 퍼소나 스튜디오에서 AI 사용자에게 자동 인터뷰도 가능해요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+    {guide&&<Card className="p-6 fade-in">
+      <div className="mb-4 flex items-center justify-between gap-2"><StepHead n={2} title="인터뷰 가이드" sub="섹션·질문·프로브" done={true}/>{guide.sections&&<div className="flex gap-2"><WsSave title="인터뷰 가이드" getText={guideMd} toast={toast}/><Btn size="sm" variant="outline" onClick={()=>download("interview_guide.md",guideMd())}>↧ MD</Btn><Btn size="sm" variant="soft" onClick={()=>copyText(guideMd()).then(()=>toast("ok","복사됨 — 퍼소나 스튜디오로"))}>→ 복사</Btn></div>}</div>
+      {guide.sections?<div className="space-y-4">
+        {guide.sections.map((s,i)=><div key={i} className="rounded-xl border border-hair p-4"><div className="mb-2 font-bold text-ink">{i+1}. {S(s.name)}</div><ol className="ml-5 list-decimal space-y-2 text-[15px] text-ink">{arr(s.questions).map((q,j)=><li key={j}>{S(q.q)}{!!arr(q.probes).length&&<ul className="ml-3 mt-1 list-disc text-[13px] text-slate-500">{arr(q.probes).map((p,k)=><li key={k}>{S(p)}</li>)}</ul>}</li>)}</ol></div>)}
+        {guide.time_plan&&<div><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-slate-400">시간 배분</div><p className="text-[14px] text-slate-600">{S(guide.time_plan)}</p></div>}
+        {!!(guide.bias_notes||[]).length&&<div className="rounded-xl bg-amber-50 p-3"><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-amber-700">유도질문·편향 점검</div><ul className="ml-5 list-disc space-y-1 text-[13px] text-amber-800">{guide.bias_notes.map((b,i)=><li key={i}>{S(b)}</li>)}</ul></div>}
+      </div>:<pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{guide.raw}</pre>}
+    </Card>}
+  </div>;
+}
+
+/* ============================================================
+   Root
+   ============================================================ */
+const TABS=[{id:"interview",label:"① 인터뷰 전사·요약",pid:"P1-A1"},{id:"survey",label:"② 설문 코딩",pid:"P1-A2"},{id:"voc",label:"③ 리뷰·VOC 분석",pid:"P1-A3"},{id:"desk",label:"④ 데스크 리서치",pid:"P1-A4"},{id:"guide",label:"⑤ 인터뷰 가이드",pid:"P1-A5"}];
+function App(){
+  const[settings,setSettings]=useState(()=>{const s=load(SETTINGS_KEY,null);const fc=(window.UXAX_CONFIG&&window.UXAX_CONFIG.anthropicApiKey)||"";const def={backend:fc?"api":"manual",apiKey:fc,model:MODELS[0].id,ollamaUrl:"http://127.0.0.1:11434",ollamaModel:"",webllmModel:WEBLLM_PREFERRED[0]};return s?{...def,...s}:def;});
+  const[tab,setTab]=useState(()=>{const h=(location.hash||"").replace("#","");return TABS.find(t=>t.id===h)?h:"interview";});
+  const[showSettings,setShowSettings]=useState(false);const[toast,setToastState]=useState(null);const[,force]=useState(0);
+  const ready=backendReady(settings);
+  useEffect(()=>{save(SETTINGS_KEY,settings)},[settings]);
+  useEffect(()=>{location.hash=tab},[tab]);
+  useEffect(()=>{const f=()=>force(n=>n+1);manualBridge.notify=f;webllmLoader.notify=f;sttLoader.notify=f;embLoader.notify=f;return()=>{manualBridge.notify=null;webllmLoader.notify=null;sttLoader.notify=null;embLoader.notify=null;};},[]);
+  const toastFn=useCallback((t,m)=>{setToastState({type:t,msg:m});setTimeout(()=>setToastState(null),3400)},[]);
+  useEffect(()=>{if(settings.backendChosen||settings.backend!=="manual")return;(async()=>{try{const l=await ollamaListModels(settings.ollamaUrl,1500);if(l.length){setSettings(s=>({...s,backend:"ollama",ollamaModel:l[0]}));toastFn("ok","로컬 Ollama 자동 연결 · "+l[0]);}}catch(e){}})();/*eslint-disable-next-line*/},[]);
+  const openSettings=()=>setShowSettings(true);
+  return <div className="min-h-screen">
+    <header className="sticky top-0 z-40 border-b border-hair bg-canvas/85 backdrop-blur-md">
+      <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-5 py-3">
+        <a href="./index.html" className="rounded-[10px] px-2 py-1.5 text-sm text-slate-500 hover:bg-slate-100">← 홈</a>
+        <div className="flex items-center gap-2.5"><div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-brand text-sm font-black text-white">P1</div><div><div className="text-[16px] font-extrabold leading-none tracking-tight text-ink">리서치 스튜디오</div><div className="text-[11px] text-slate-400">전사·설문코딩·VOC 분석 · 전부 무료</div></div></div>
+        <div className="flex-1"/>
+        <button onClick={openSettings} className={cx("hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1 ring-inset sm:inline-flex",ready?"bg-emerald-50 text-emerald-600 ring-emerald-100":"bg-amber-50 text-amber-600 ring-amber-100")}><span className={cx("h-1.5 w-1.5 rounded-full",ready?"bg-emerald-500":"bg-amber-500")}/>{backendLabel(settings)}</button>
+        <button onClick={openSettings} className="rounded-[10px] p-2 text-slate-500 hover:bg-slate-100" title="설정">⚙</button>
+      </div>
+      <ProcessNav current={CURRENT_PHASE}/>
+      <div className="mx-auto max-w-[1100px] overflow-x-auto px-3"><nav className="flex gap-1">{TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} className={cx("flex items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition",tab===t.id?"border-brand text-brand-hover":"border-transparent text-slate-500 hover:text-ink")}>{t.label}<span className="text-[11px] text-slate-400">{t.pid}</span></button>)}</nav></div>
+    </header>
+    <main className="mx-auto max-w-[1100px] px-5 py-7">
+      <div className={tab==="interview"?"":"hidden"}><InterviewPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+      <div className={tab==="survey"?"":"hidden"}><SurveyPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+      <div className={tab==="voc"?"":"hidden"}><VocPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+      <div className={tab==="desk"?"":"hidden"}><DeskPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+      <div className={tab==="guide"?"":"hidden"}><GuidePanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+    </main>
+    {showSettings&&<SettingsModal settings={settings} onSave={(s)=>{setSettings({...s,backendChosen:true});setShowSettings(false);toastFn("ok","설정 저장됨");}} onClose={()=>setShowSettings(false)}/>}
+    <ManualModal req={manualBridge.current()} queueCount={manualBridge.count()} onSubmit={(t)=>manualBridge.resolveCurrent(t)} onCancel={()=>manualBridge.rejectCurrent()}/>
+    <ProgressOverlay state={sttLoader} title="전사 모델 준비 중" emoji="🎙️"/>
+    <ProgressOverlay state={embLoader} title="임베딩 모델 준비 중" emoji="🧮"/>
+    <ProgressOverlay state={webllmLoader} title="브라우저 내장 AI 준비 중" emoji="🌐"/>
+    <WorkspaceFab toast={toastFn}/>
+    <MentorFab tab={tab} settings={settings} openSettings={openSettings} toast={toastFn}/>
+    <Toast toast={toast}/>
+  </div>;
+}
+window.addEventListener("error",(e)=>{const root=document.getElementById("root");if(root&&(!root.firstElementChild||root.dataset.errored)){if(root.dataset.errored)return;root.dataset.errored="1";root.innerHTML='<div style="padding:24px;font-family:Pretendard,system-ui,sans-serif;color:#b91c1c"><h2 style="font-weight:700;margin-bottom:8px">초기화 오류</h2><pre style="white-space:pre-wrap;color:#54576a">'+(e.message||e.error||"알 수 없는 오류")+'</pre></div>';}});
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

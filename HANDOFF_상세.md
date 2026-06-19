@@ -1,0 +1,230 @@
+# HANDOFF (상세·영구) — UX×AX 자동화 도구 모음
+
+`v1.53 · 제작일 2026-06-18(코드)·정리 2026-06-19 · 작성: DIR4 AI Lab · 문서 ID UXAX-STUDIO-2026`
+
+> **■ 지금 진행 중 — [P1 기준 모델 재설계 라운드] Step 0~3 완료 (v1.53).** 단계 로드맵 [PLAN.md](PLAN.md), 상세 플랜 `~/.claude/plans/transient-skipping-emerson.md`.
+> 사용자 P1 전수 피드백 → **방향 전환:** "기능 패널 7묶음" → **초급자가 리더 없이 따라가며 배우는 자기설명형 흐름 도구.** 판단 4축: ①자기설명성(여기서 뭘 해서 뭘 얻나 1줄+쉬운 용어) ②흐름·적응성("스튜디오 메뉴" 지양·필요한 단계만) ③따라다니는 학습 멘토 ④통합 템플릿 데이터(dossier 슬롯).
+> **이번 라운드 완료분:**
+> - **Step 0 · 기반:** `common.js` 신규 — 7파일 컴포넌트 복제 drift 방지 위해 평문 공통로직을 **`window.UXAX` 네임스페이스**로 추출(기존 전역명 재선언 금지). **프로젝트 dossier 데이터모델** `localStorage["uxax_project_v1"]`(brief+slots+mentorLog) + 작업별 모델 라우팅 `UXAX.pickModel`(전사=large-v3-turbo, 한국어생성=EXAONE 우선).
+> - **Step 1 · index P0:** 7스텝 위저드 → **한 페이지 폼**(유형 항상 노출 → ‘이전 못 감’ 해소·예시 일괄·필드별 의도 크기·자동높이·dossier.brief 저장). P1 인터뷰 ‘리서치 맥락’ 자동 프리필 호환.
+> - **Step 2 · P1 공통:** `Guide` → ‘🎯 이 도구로: … 1줄 + [📖 사용방법] 모달’. **플로팅 학습 멘토** `MentorFab`(우하단 따라다님·탭별 추천질문 즉답·자유질문 AI·Q&A를 `mentorLog`에 저장→‘내 질문’ 복습).
+> - **Step 3 · P1 인터뷰:** 모델 기본 **turbo**·오디오 기본플레이어 `controlsList="nodownload noplaybackrate"`(⋮ 중복 제거)·‘⬇ 다운로드’ 라벨·🗑 삭제·**추정 % 진행바**(원형 스피너 대체)·드래그 active·**클로바식 결과**(화자 색블록·타임스탬프·문장 textarea·상단 액션바)·`P1.interview` 슬롯 저장.
+> **⚠ 미완·주의:** **Step 4~6 미완**(설문·VOC·데스크·가이드 재설계 + 보관함 템플릿 뷰·단계 네비·smoke 재실행). **이번 재설계는 P1 인터뷰 탭 위주 — P1 나머지 탭·P2~P7 미확산.** 브라우저 무료 한국어 전사는 구조적 한계(정확도 필요 시 clova·Purfview 로컬 후 ‘붙여넣기’). large-v3-turbo 한국어 실품질 **실오디오 미검증**.
+> **이전 이력 압축:** v1.4 index P0 신규 → v1.41 P0 고도화·P1 자동프리필 → v1.42 퍼소나 링크 경로 정정 / (그 전) v1.2 학습레이어 7앱 확산+연동, v1.3 전사품질·인터뷰 1차 개편. → §11.
+
+> **이 문서가 무엇인가 / [HANDOFF.md](HANDOFF.md)와의 차이 (꼭 읽을 것)**
+> - **이 파일(`HANDOFF_상세.md`) = 손으로 관리하는 영구 인계 문서.** 자동 훅이 안 건드림. 인수자/AI가 맥락을 잃지 않도록 구조·내부동작·확장법·한계를 정리. → **인계는 여기부터 읽기.**
+> - **[HANDOFF.md](HANDOFF.md) = Stop 훅(`~/.claude/hooks/update-handoff.js`)이 매 턴 자동 생성하는 세션 타임라인.** 손으로 쓰면 다음 턴에 통째로 덮어써짐(과거에 상세본이 이렇게 한 번 소실됨). 거기엔 손으로 쓰지 말 것.
+> - 사용자용 빠른 시작은 [README.md](README.md), 버전·변경이력은 [VERSION.md](VERSION.md)가 SSOT.
+
+---
+
+## 1. 한눈에 (TL;DR)
+
+- **무엇:** UX 표준 6단계(P1 리서치 → P6 핸드오프) + P7 운영의 **자동화 과제 29개**를, 흩어진 프롬프트 카드가 아니라 **연계성으로 묶은 7개 스튜디오 앱**으로 실제 자동화한 도구 모음. 전부 **무료·무빌드·단일 HTML**.
+- **차별점:** "프롬프트 칸"이 아님. LLM 호출 주변의 실제 작업(전사·임베딩 군집·PDF 추출·A/B 통계·색대비·픽셀 diff·z-score)을 **브라우저 안에서 코드로** 처리하고, LLM은 파이프라인의 **한 단계**(요약·분류·라벨·해석)만 담당.
+- **시작점:** [index.html](index.html) 더블클릭(허브) → **P0 프로젝트 정의(한 페이지)** → 스튜디오 선택.
+- **상태:** **v1.53** — P1 기준 모델 재설계 라운드 Step 0~3 완료(공통 `common.js`+dossier·P0 폼·플로팅 멘토·인터뷰 클로바식). 스모크 28/28(2026-06-17 기준 · P1 내부 변경 후 Step 6에서 재실행 예정). 정본 폴더 = **`260617_UX디자인프로세스_자동화`**.
+- **인수자가 먼저 할 일:** ① 진행 플랜 `~/.claude/plans/transient-skipping-emerson.md` + [PLAN.md](PLAN.md) ‘다음 작업 체크리스트’ 읽기(다음 = **Step 4 설문 탭**) → ② **`common.js`의 `window.UXAX`(dossier/slot/mentor)** 가 새 공통 기반(§4.4) → ③ [index.html](index.html)·P1 열어 P0 폼·플로팅 멘토 확인 → ④ 엔진 설정(⚙️) 무료 1개(§3) → ⑤ 수정 후 `bash smoke-test.sh`.
+
+---
+
+## 2. 폴더 / 파일 맵
+
+```
+260617_UX디자인프로세스_자동화/
+├─ index.html                     ← 허브(시작점). P0 프로젝트 정의 폼 + 7 스튜디오 카드 + 29 도구 그리드
+├─ common.js                       ← ★공통 평문 로직(window.UXAX): dossier/slot/mentor/모델라우팅. babel보다 먼저 로드
+├─ CLAUDE.md                       ← 이 프로젝트 지침(전역·상위 상속 + 고유 맥락·제약)
+├─ P1_리서치스튜디오.html          ← 전사·요약 / 설문코딩 / VOC / 데스크리서치 / 인터뷰가이드 (재설계 라운드 진행중)
+├─ P2_정의스튜디오.html            ← 어피니티 / 여정맵 / HMW / PRD   (+퍼소나 앱으로 링크)
+├─ P3_아이디에이션스튜디오.html     ← 발산 / IA / 플로우 / 우선순위
+├─ P4_콘텐츠스튜디오.html          ← UX라이팅 / 현지화 / 더미콘텐츠
+├─ P5_디자인핸드오프스튜디오.html   ← 와이어 / 토큰 / 코드스펙 / 체인지로그
+├─ P6_품질검증스튜디오.html        ← 사용성 / 휴리스틱·접근성 / 디자인QA
+├─ P7_피드백운영스튜디오.html       ← 피드백분류 / A/B / 이상탐지 / 운영피드백
+├─ config.example.js               ← 설정 템플릿(API키·퍼소나URL). 복사 → config.js (gitignore)
+├─ start-ollama.bat · serve.bat     ← 로컬 Ollama 기동 / 로컬 HTTP 서버
+├─ smoke-test.sh · smoke-test.mjs · package.json  ← 검증(전 탭 헤드리스 렌더)
+├─ README.md · VERSION.md           ← 사용자 안내 / 버전·변경이력(SSOT)
+├─ HANDOFF.md (자동) · HANDOFF_상세.md (이 문서)
+└─ .claude/handoff-state.json       ← 자동 훅의 세션 누적 사이드카
+```
+
+- **퍼소나 스튜디오는 이 폴더에 없음.** 별도 앱: `D:\AI_Project\260618_퍼소나_스튜디오\v0.2\persona-studio.html`. P2-A2(페르소나)·P5-A5(가상 사용자 인터뷰)는 그 앱이 전담.
+- **⚠ 경로 함정(v1.42에서 재정정):** index.html·P2의 퍼소나 링크 fallback은 현재 `../260618_퍼소나_스튜디오/v0.2/persona-studio.html`. 이 폴더가 **또 옮겨지면 다시 깨짐** — 항구적 안전책은 `config.js`의 `personaStudioUrl`을 절대경로로 박는 것. (야간 검수가 매일 이 링크 실재 여부를 점검함.)
+
+---
+
+## 3. 사용자 실행법 — 무료 4엔진 (모든 앱 공유)
+
+설정(⚙️)에서 한 번 고르면 7개 앱이 같은 설정(localStorage `uxax_studio_settings_v1`)을 공유.
+
+| 엔진 (`backend`) | 비용 | 설치 | 비전 | 켜는 법 |
+|---|---|---|---|---|
+| 브라우저 내장 AI (`webllm`) | 무료 | 없음 | ✕ | WebGPU 지원 브라우저면 자동. 최초 1회 모델 다운로드. |
+| 로컬 Ollama (`ollama`) | 무료 | 1회 | ✕ | `start-ollama.bat` → 자동 감지. 한국어: `ollama pull exaone3.5:7.8b` |
+| 수동/챗GPT 복붙 (`manual`) | 무료 | 없음 | ○(직접) | 기본값. 프롬프트 창을 챗봇에 복붙 → 답을 다시 붙여넣기. |
+| Anthropic API (`api`) | 유료 | 없음 | ○ | `config.example.js`→`config.js` 복사 후 키 입력. |
+
+- 전사·임베딩·통계·픽셀 diff·색대비는 **엔진과 무관하게** 브라우저에서 자동 계산. LLM 단계(요약·분류 등)만 위 엔진 사용.
+- `file://`에서 막히면 `serve.bat`(로컬 서버)로 열 것.
+
+---
+
+## 4. 아키텍처 (내부 동작)
+
+### 4.1 패턴: 단일 HTML · CDN · 무빌드
+- 각 스튜디오 = HTML 1개. `<head>`에서 CDN 로드: **Pretendard(jsdelivr) · TailwindCSS(cdn.tailwindcss.com) · React 18 + ReactDOM(unpkg) · @babel/standalone(unpkg)**.
+- 본문은 `<script type="text/babel" data-presets="react">`에 **JSX 인라인** → Babel standalone이 브라우저에서 트랜스파일. **빌드 도구 없음.**
+- 무거운 라이브러리는 **동적 import**(`esm.run`/`jsdelivr`)로 필요 시 로드(아래 표).
+- **빈 화면 방지 3중장치:** ① `#root`에 로딩 스피너 HTML 선렌더 → ② 관대한 JSON 파서 `parseJsonLoose`(코드펜스·후행쉼표·부분 JSON 복구) → ③ localStorage 저장 실패 시 하단 경고 배너(`__uxaxSaveWarn`).
+
+### 4.2 LLM 엔진 추상화 — `runLLM(settings, opts)`
+한 함수가 4백엔드로 분기(P1 기준 [P1_리서치스튜디오.html:83](P1_리서치스튜디오.html#L83)):
+- `callManual` — `manualBridge` 큐에 프롬프트 쌓고 사용자가 답 붙여넣기.
+- `callOllama` — `http://127.0.0.1:11434/api/chat`, num_ctx 8192, 스트리밍.
+- `callWebLLM` — `esm.run/@mlc-ai/web-llm`, WebGPU. 선호 모델 `Qwen2.5-3B/7B`, `Llama-3.2-3B`. 다운로드 4회 재시도.
+- `callClaude` — `api.anthropic.com/v1/messages`, 헤더 `anthropic-dangerous-direct-browser-access:true`. 모델 `claude-opus-4-8`/`sonnet-4-6`/`haiku-4-5`.
+- `backendReady(s)`·`backendLabel(s)`로 준비상태·표시명 판별.
+
+### 4.3 브라우저 내 자동화 라이브러리 (LLM 외 실제 처리)
+| 기능 | 라이브러리 / 구현 | 위치(대표) |
+|---|---|---|
+| 오디오→텍스트 전사(STT) | `@huggingface/transformers@3.3.3` Whisper(base/tiny/small), WebGPU→WASM fallback, 16kHz PCM 변환 | P1 #interview |
+| 임베딩 + k-means 군집 | transformers `feature-extraction`, `paraphrase-multilingual-MiniLM-L12-v2`(fallback all-MiniLM-L6-v2), **자체 kmeans 구현** | P1 #voc, P2 #affinity |
+| PDF 텍스트 추출 + 간이 RAG | `pdfjs-dist@4.10.38`(jsdelivr) + chunk(600/overlap100) + 코사인(dot) | P1 #desk |
+| 플로우 다이어그램 | Mermaid 자동 렌더 → SVG | P3 #flow |
+| A/B 통계 | z검정·p값·신뢰구간 직접 계산 | P7 #ab |
+| 이상탐지 | z-score | P7 #anomaly |
+| 색 대비(WCAG) | 명암비 직접 계산 | P6 #heuristic |
+| 디자인 QA | canvas 픽셀 diff | P6 #qa |
+| 공통 | CSV 파서/직렬화, MD/CSV/JSON 내보내기, 차트 | 전 앱 |
+
+### 4.4 localStorage 키 맵
+- `uxax_studio_settings_v1` — **엔진 설정**(backend·apiKey·model·ollama·webllm). 7앱 공유. `SETTINGS_KEY`.
+- `uxax_project_v1` — **★프로젝트 한 권(dossier, v1.5 신규)**. `{id,name,type,brief,slots:{"P1.interview":{data,md,meta}…},mentorLog}`. `common.js`의 `window.UXAX` API로만 접근(`loadProject/setBrief/getBrief/setSlot/getSlot/mentorAdd/mentorLoad/pickModel`). 슬롯 레지스트리 `UXAX.SLOT_REGISTRY`(슬롯→단계명·작업·다음단계).
+- `uxax_project_brief_v1` — 구 P0 위저드 데이터(레거시). `common.js`가 dossier로 1회 마이그레이션. P1 인터뷰 자동 프리필이 아직 이 키도 읽음(공존).
+- `uxax_workspace_v1` — **공유 보관함(Workspace, 레거시)**. 평문 MD 배열, 7앱 공유. `WS_KEY`. 최대 300건. (Step 6에서 dossier 슬롯 기반 ‘템플릿 뷰’로 대체 예정 — 현재 공존.)
+- 각 도구 입력/결과도 `load/save` 헬퍼로 도구별 키(JSON). 모두 **브라우저 localStorage에만**, 서버 없음.
+
+### 4.5 공유 보관함(Workspace) API — 앱 간 산출물 전달
+- `wsAdd(title,text)` 저장 / `wsLoad()` 조회 / `wsDel(id)` / `wsUpdate(id,text)` 편집 / `wsClear()`. `wsBus.notify`로 UI 갱신.
+- UI 컴포넌트: 결과 카드의 **`<WsSave>`**(📤 보관함) → 다른 도구 입력칸 위 **`<WsPull>`**(📥 가져오기) 셀렉트.
+- 흐름 예: P1 인터뷰 요약 → P2 HMW 입력 / P1 VOC → P7 피드백 입력. 사람이 보관함에서 **편집·확정** 후 다음 단계로 넘김(AI 제안을 사람이 다듬기).
+
+### 4.6 공통 UI/컴포넌트
+- 디자인 토큰(Tailwind config): brand `#5e6ad2`, ink `#16161a`, canvas `#fbfbfd`, hair `#e9e9ef`. **라이트 모드 기본.**
+- 공통 컴포넌트(JSX라 7파일 복제·표준화): `Btn`, `Tabs`(URL 해시 연동), `WsSave`/`WsPull`/`WorkspaceFab`, 설정 모달. **(v1.5+ P1)** `Guide`=‘🎯 1줄 + [📖 사용방법] 모달’, `MentorFab`=플로팅 학습 멘토(`FAQ_BY_TAB` 추천질문·`SPK_PALETTE` 화자색·`mentorLog` 저장), `AudioCard`(controlsList 중복제거·라벨 다운로드·🗑).
+- **`common.js`(평문, `window.UXAX`)** = dossier/slot/mentor/모델라우팅. babel 스크립트보다 먼저 `<script src>`. ★주의: babel 파일의 기존 전역명(`WS_KEY`·`load`·`MODELS` 등)과 충돌 금지 → 전부 `UXAX.*`로만 노출(const 중복선언 시 SyntaxError로 전체 깨짐).
+- 유틸: `cx` `S` `arr` `uid` `load/save` `copyText` `download` `parseJsonLoose` `parseCSV/toCSV` `fmtTime/parseTime` `audioDuration`(전사 진행 추정용).
+
+---
+
+## 5. 도구 ↔ 스튜디오 매핑 (29개 전체)
+
+> **⚠ 함정: 파일 이름의 P번호 ≠ UX 단계 P번호.** 예) P4-A1 와이어프레임은 **단계상 디자인(P4)**이지만 **파일은 P5_디자인핸드오프스튜디오**에 있음. index.html은 "단계 기준"으로, 파일은 "함께 쓰는 일 기준"으로 묶여 있어서 갈림. 아래는 **실제 파일#탭** 기준.
+
+| 단계ID | 도구 | 파일#탭 |
+|---|---|---|
+| P1-A1 | 인터뷰 자동 전사·요약 | P1#interview |
+| P1-A2 | 설문 개방형 코딩 | P1#survey |
+| P1-A3 | 리뷰·VOC 분석 | P1#voc |
+| P1-A4 | 데스크 리서치 합성 | P1#desk |
+| P1-A5 | 인터뷰 가이드 초안 | P1#guide |
+| P2-A1 | 어피니티 클러스터링 | P2#affinity |
+| P2-A2 | 페르소나 초안 | **퍼소나 스튜디오 전담** |
+| P2-A3 | 사용자 여정맵 | P2#journey |
+| P2-A4 | 인사이트→HMW | P2#hmw |
+| P2-A5 | 요구사항(PRD) | P2#prd |
+| P3-A1 | 아이디어 발산 | P3#idea |
+| P3-A2 | IA·사이트맵 | P3#ia |
+| P3-A3 | 사용자 플로우 | P3#flow |
+| P3-A4 | 우선순위 스코어링 | P3#priority |
+| P4-A1 | 와이어프레임 명세 | **P5#wire** |
+| P4-A2 | 디자인 토큰 | **P5#token** |
+| P4-A3 | UX 라이팅 | P4#writing |
+| P4-A4 | 더미 콘텐츠 | P4#dummy |
+| P4-A5 | 다국어 현지화 | P4#localize |
+| P5-A1 | 사용성 세션 분석 | **P6#usability** |
+| P5-A2 | 휴리스틱·접근성 | **P6#heuristic** |
+| P5-A3 | 피드백 분류 | **P7#feedback** |
+| P5-A4 | A/B 해석 | **P7#ab** |
+| P5-A5 | 가상 사용자 인터뷰 | **퍼소나 스튜디오 전담** |
+| P6-A1 | 디자인→코드 스펙 | P5#codespec |
+| P6-A2 | 체인지로그 | P5#changelog |
+| P6-A3 | 디자인 QA | **P6#qa** |
+| P6-A4 | 이상탐지 | **P7#anomaly** |
+| P6-A5 | 운영 피드백 분류 | **P7#ops** |
+
+→ 자동화 완료 27개 + 퍼소나 앱 전담 2개(P2-A2, P5-A5) = 29.
+
+---
+
+## 6. 확장 레시피
+
+### 새 탭(도구) 추가
+1. 해당 스튜디오 HTML에서 `Tabs` 정의에 `{key:"새해시", label:"…"}` 추가(해시는 smoke-test의 TARGETS에도 추가).
+2. 패널 컴포넌트를 Root 위에 작성. 입력칸 위 `<WsPull onPick=…>`, 결과 카드에 `<WsSave getText=…>`를 끼워 보관함과 연결.
+3. LLM이 필요하면 `runLLM(settings,{system,messages})` 호출 + 결과는 `parseJsonLoose`로 파싱(JSON 강제 프롬프트 권장).
+4. 브라우저 처리(통계·임베딩 등)는 §4.3 헬퍼 재사용. 무거운 lib는 동적 import.
+5. **검증:** smoke-test.sh의 TARGETS에 `파일|…새해시` 반영 후 `bash smoke-test.sh` → 28→N개로 늘고 전부 ✓ 확인.
+
+### 새 엔진 추가
+- `call○○()` 함수 작성 → `runLLM`의 분기와 `backendReady`/`backendLabel`에 백엔드 키 추가 → 설정 모달에 옵션 추가.
+
+### 새 스튜디오(앱) 추가
+- 기존 HTML 1개 복제 → §4 공통 블록(유틸·`runLLM`·보관함·컴포넌트)은 그대로 두고 패널만 교체 → index.html의 `STUDIOS`/`PHASES` 배열에 카드 등록 → smoke-test TARGETS에 파일 추가.
+
+---
+
+## 7. 검증 (스모크 테스트)
+
+- **무설치:** `bash smoke-test.sh` — 헤드리스 Chrome으로 index + 7앱의 **28개 탭**을 열어 `#root` 실제 렌더(빈 화면/초기화 오류) 자동 검사. 종료코드 0=통과. Chrome 경로 자동탐지(안 되면 `CHROME=… bash smoke-test.sh`).
+- **Playwright:** `npm run test:install` 후 `npm test`.
+- **판정 로직:** 스크립트 소스 제거 후 실제 렌더 텍스트 길이<400자 또는 "초기화 오류"/"불러오는 중" 잔존 → FAIL.
+- **현재:** 28/28 PASS (2026-06-17 재실행 확인).
+
+---
+
+## 8. 알려진 한계 / 주의
+
+- **퍼소나 링크는 경로 의존적.** 폴더를 또 옮기면 다시 깨짐 → `config.js`의 `personaStudioUrl` 절대경로 권장. (v1.01에서 1차 수정)
+- **헤드리스 단순 렌더 시 스튜디오 로딩이 길 수 있음**(transformers/pdf.js 등). 허브 index.html은 즉시 렌더. 무거운 기능은 `serve.bat`로.
+- **WebLLM은 WebGPU 필요**(미지원 브라우저는 Ollama/수동/ API로). 최초 모델 다운로드 큼.
+- **localStorage 용량 한계** — 가득 차면 자동저장 실패 + 경고 배너. 큰 결과는 MD/CSV/JSON로 내보내기 권장. 보관함 300건 상한.
+- **수동 모드**는 사람이 복붙해야 하므로 배치 자동화엔 부적합(엔진을 Ollama/API로).
+- 마크다운 문서의 lint 경고(표 정렬·빈 줄)는 표시 스타일로 렌더·내용 영향 없음.
+
+---
+
+## 9. 다음 선택지 (백로그)
+
+- 보관함 산출물에 **출처 태그/단계 메타**를 붙여 단계 간 추적성 강화.
+- 도구별 결과를 한 번에 모아 **프로젝트 리포트(MD/PDF)** 로 내보내는 통합 export.
+- 퍼소나 스튜디오와의 양방향 연동(P2 정의 결과 → 퍼소나 입력).
+- 디자이너용 입문 덱(별도 `04` 프로덕트)과의 학습 동선 연결.
+- (있다면) GitHub 저장소 연결 + `config.js` 시크릿 분리 점검.
+
+---
+
+## 10. 데이터 · 개인정보
+
+- 모든 입력·결과는 **브라우저 localStorage**에만 저장(서버 없음).
+- 로컬 Ollama / 브라우저 AI는 입력이 **PC 밖으로 안 나감**. Anthropic API 모드만 외부 전송(키 필요).
+- **비밀키는 `config.js`(gitignore 대상)에만.** `config.example.js`만 공유. 자동 갱신 문서(HANDOFF.md 등)에 평문 키를 쓰지 말 것.
+
+---
+
+## 11. 변경 이력 / 세션 히스토리 요약
+
+- **2026-06-18~19 (v1.5~v1.53) [P1 기준 모델 재설계 라운드]:** 사용자 P1 전수 피드백으로 방향 전환(자기설명·흐름·멘토·통합 템플릿 4축). **Step 0** common.js(`window.UXAX`)+dossier(`uxax_project_v1`)+모델라우팅 / **Step 1** index P0 7스텝→한 페이지 폼(v1.5, 레이아웃 v1.51) / **Step 2** Guide→사용방법 모달+플로팅 학습 멘토(v1.52) / **Step 3** 인터뷰 탭 turbo기본·오디오 중복제거·추정 진행바·클로바식 결과(v1.53). 각 Playwright e2e·콘솔0. **남음 Step 4~6.** 상세 플랜 `~/.claude/plans/transient-skipping-emerson.md`.
+- **2026-06-18 (v1.4~v1.42):** index에 **P0 ‘프로젝트 정의’ 단계 신규**(v1.4, 유형별 브리프) → **P0 고도화·P1 ‘리서치 맥락’ 자동 프리필 연동**(v1.41) → 퍼소나 앱 `88_네이버_퍼소나`→`260618_퍼소나_스튜디오` 리네임에 따른 **링크 경로 정정**(v1.42, 야간 검수 발견).
+- **2026-06-18 (v1.3):** 사용자 피드백 반영 — 전사 품질 수정(q8·반복방지·모델 small/large-v3-turbo) + **P1 인터뷰 탭 대개편**(멀티 업로드·파일별 플레이어·모델 선택 전사 비교·2단·‘텍스트화’ 용어·zoom 1.2·Guide 접힘). Qwen3-TTS/Voicebox(둘 다 TTS라 전사 아님)·Qwen3-ASR(서버/API 필요)·Purfview standalone(로컬 exe) 조사 후 “브라우저 무료 한국어 전사는 한계 → 붙여넣기 권장” 결론. Playwright 9/9. **P1만 적용 — 확산 미완.**
+- **2026-06-17 (v1.2):** 초급자 **학습 레이어 7개 앱 전체 확산** + 단계 간 연동 동선(P5→P6·P6↔P7·P7→P3 순환) 완성. 진행 중 **Babel automatic-runtime 렌더 깨짐**(7개 전체 스피너 무한)을 발견해 `Babel.registerPreset`으로 classic runtime 강제해 수정(v1.11). Playwright 기능검증을 앱별 통과·보관함 7앱 공유 end-to-end·smoke 28/28 확인. 버전 흐름: v1.1 학습레이어 도입 → v1.11 babel 수정 → v1.12 P1 완성 → v1.2 7앱 확산. 다음: 실무 MVP 고도화(Phase 5).
+- **2026-06-17 (v1.01):** `05_` 귀속 후 발견된 **퍼소나 링크 경로 깨짐** 수정(`../../../`→`../`, index·P2 2곳). 스모크 28/28 재확인. 이 영구 상세 핸드오프 신규 작성. (앞서 자동 훅이 상세본을 덮어쓴 사고를 영구 파일 분리로 해소.)
+- **2026-06-17 (v1.0):** 원본(`_desktop_…/260615_UX디자인프로세스/`)에서 이 폴더로 귀속(복사), 원본 삭제(사용자 승인). 정본 확정.
+- **이전 세션들(원본 위치, 요약):** Figma 참조로 시작 → 29개 자동화 포인트 분석 → "프롬프트 래퍼"가 아닌 실제 자동화로 방향 전환 → P1~P7 7개 스튜디오 단계 제작(전사·임베딩·PDF·통계·diff 등 브라우저 처리 내장) → 각 도구 학습자료급 Guide 확장 → 보관함으로 산출물 연결 → 스모크 테스트(28/28) 구축. 상세 원문 로그는 자동 훅 타임라인과 `logs/`.
+
+---
+*SSOT: 버전·이력=[VERSION.md](VERSION.md) · 사용자 안내=[README.md](README.md) · 세션 자동 타임라인=[HANDOFF.md](HANDOFF.md)(자동 생성, 손대지 말 것).*

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>디자인·핸드오프 스튜디오 (와이어·토큰·코드스펙·체인지로그)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>/* JSX를 classic runtime(React.createElement)으로 강제 — automatic runtime의 import문이 file://(비모듈)에서 깨지는 것 방지 */try{Babel.registerPreset("uxax-react",{presets:[[Babel.availablePresets["react"],{runtime:"classic"}]]});}catch(e){}</script>
+<script>
+  tailwind.config={theme:{extend:{
+    colors:{brand:{DEFAULT:'#5e6ad2',hover:'#4f5bd5',light:'#eef0fb',faint:'#f6f7fd'},ink:{DEFAULT:'#16161a'},canvas:'#fbfbfd',hair:'#e9e9ef'},
+    fontFamily:{sans:['Pretendard','Pretendard Variable','-apple-system','system-ui','sans-serif']},
+    boxShadow:{soft:'0 1px 2px rgba(16,16,26,.04), 0 4px 16px rgba(16,16,26,.06)',pop:'0 8px 40px rgba(16,16,26,.16)'},
+    letterSpacing:{tighter2:'-0.02em'},
+  }}};
+</script>
+<style>
+  html{font-size:16px}body{background:#fbfbfd;color:#16161a;-webkit-font-smoothing:antialiased}
+  ::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:#d7d7e0;border-radius:8px;border:3px solid #fbfbfd}
+  .fade-in{animation:fadeIn .22s ease both}@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="root">
+  <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Pretendard,system-ui,sans-serif;color:#54576a;flex-direction:column;gap:14px">
+    <div style="width:40px;height:40px;border:3px solid #e9e9ef;border-top-color:#5e6ad2;border-radius:50%;animation:spin 1s linear infinite"></div>
+    <div style="font-size:15px">디자인·핸드오프 스튜디오를 불러오는 중…</div>
+  </div>
+</div>
+<script>window.UXAX_CONFIG=window.UXAX_CONFIG||{};</script>
+<script src="config.js" onerror="void 0"></script>
+<script type="text/babel" data-presets="uxax-react">
+const { useState, useEffect, useRef, useCallback } = React;
+const SETTINGS_KEY="uxax_studio_settings_v1";
+const MODELS=[{id:"claude-opus-4-8",label:"Claude Opus 4.8 · 최고 품질"},{id:"claude-sonnet-4-6",label:"Claude Sonnet 4.6 · 균형"},{id:"claude-haiku-4-5",label:"Claude Haiku 4.5 · 빠름"}];
+const cx=(...a)=>a.filter(Boolean).join(" ");
+const S=(v)=>v==null?"":Array.isArray(v)?v.map(S).join(", "):(typeof v==="object"?(v.text||v.name||JSON.stringify(v)):String(v));
+const arr=(v)=>Array.isArray(v)?v:(v==null?[]:[v]);
+const uid=(p="x")=>p+"_"+Math.random().toString(36).slice(2,9);
+function load(k,fb){try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb}catch(e){return fb}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){__uxaxSaveWarn();return false}}
+function __uxaxSaveWarn(){try{if(document.getElementById("uxax-savewarn"))return;var b=document.createElement("div");b.id="uxax-savewarn";b.style.cssText="position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#b91c1c;color:#fff;font:600 13px Pretendard,system-ui,sans-serif;padding:10px 16px;text-align:center;box-shadow:0 -4px 16px rgba(0,0,0,.18)";b.innerHTML="⚠ 저장 공간이 가득 차 자동 저장에 실패했습니다. 지금 결과를 <b>내보내기(MD/CSV/JSON)</b>로 백업하세요 — 새로고침하면 사라질 수 있습니다. <span style=\"text-decoration:underline;cursor:pointer\" onclick=\"this.parentNode.remove()\">닫기</span>";document.body.appendChild(b);}catch(e){}}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy")}catch(e2){}document.body.removeChild(ta);return true}}
+function download(fn,text,type="text/plain;charset=utf-8"){const b=new Blob(["﻿"+text],{type});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(u)},100);}
+/* ===== 공유 워크스페이스(보관함) — 도구·앱 간 산출물 전달 ===== */
+const WS_KEY="uxax_workspace_v1";const wsBus={notify:null};
+function wsLoad(){return load(WS_KEY,[]);}
+function wsAdd(title,text){if(!text||!String(text).trim())return false;const a=wsLoad();a.unshift({id:uid("ws"),title:title||"산출물",text:String(text),at:new Date().toLocaleString("ko-KR")});const ok=save(WS_KEY,a.slice(0,300));if(wsBus.notify)wsBus.notify();return ok;}
+function wsDel(id){save(WS_KEY,wsLoad().filter(x=>x.id!==id));if(wsBus.notify)wsBus.notify();}
+function wsClear(){save(WS_KEY,[]);if(wsBus.notify)wsBus.notify();}
+function wsUpdate(id,text){const a=wsLoad().map(x=>x.id===id?{...x,text:String(text)}:x);save(WS_KEY,a);if(wsBus.notify)wsBus.notify();}
+function _tryParse(s){try{return JSON.parse(s)}catch(e){}const c=s.replace(/\/\*[\s\S]*?\*\//g,"").replace(/^\s*\/\/.*$/gm,"").replace(/,(\s*[}\]])/g,"$1");try{return JSON.parse(c)}catch(e){}return undefined}
+function parseJsonLoose(text){if(!text)return null;let t=String(text).trim();const f=t.match(/```(?:json)?\s*([\s\S]*?)```/i);if(f)t=f[1].trim();let r=_tryParse(t);if(r!==undefined)return r;const a=t.indexOf("["),o=t.indexOf("{");const st=a===-1?o:o===-1?a:Math.min(a,o);if(st===-1)return null;const op=t[st],cl=op==="["?"]":"}";let d=0,ins=false,esc=false;for(let i=st;i<t.length;i++){const c=t[i];if(ins){if(esc)esc=false;else if(c==="\\")esc=true;else if(c==='"')ins=false;}else{if(c==='"')ins=true;else if(c===op)d++;else if(c===cl){d--;if(!d){const r2=_tryParse(t.slice(st,i+1));if(r2!==undefined)return r2;}}}}const r3=_tryParse(t.slice(st));return r3===undefined?null:r3;}
+function fileToImagePart(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const url=r.result;const m=/^data:(.*?);base64,(.*)$/.exec(url);if(!m)return rej(new Error("이미지 형식 오류"));res({url,part:{type:"image",source:{type:"base64",media_type:m[1],data:m[2]}}});};r.onerror=rej;r.readAsDataURL(file);});}
+
+/* ===== LLM 엔진 ===== */
+const API_URL="https://api.anthropic.com/v1/messages";
+async function callClaude({apiKey,model,system,messages,maxTokens=4096,stream=false,onDelta,signal}){if(!apiKey){const e=new Error("API 키가 없습니다");e.code="NO_KEY";throw e;}const body={model,max_tokens:maxTokens,messages};if(system)body.system=system;if(stream)body.stream=true;const res=await fetch(API_URL,{method:"POST",headers:{"content-type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body),signal});if(!res.ok){let d="";try{const j=await res.json();d=j.error?.message||JSON.stringify(j)}catch(e){try{d=await res.text()}catch(e2){}}const err=new Error("API "+res.status+(d?" · "+d:""));err.status=res.status;throw err;}if(!stream){const data=await res.json();return (data.content||[]).map(b=>b.text||"").join("");}const rd=res.body.getReader();const dec=new TextDecoder();let buf="",full="";while(true){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;while((i=buf.indexOf("\n\n"))>=0){const blk=buf.slice(0,i);buf=buf.slice(i+2);const ln=blk.split("\n").find(l=>l.startsWith("data:"));if(!ln)continue;const p=ln.slice(5).trim();if(!p||p==="[DONE]")continue;try{const evt=JSON.parse(p);if(evt.type==="content_block_delta"&&evt.delta?.type==="text_delta"){full+=evt.delta.text;onDelta&&onDelta(full,evt.delta.text);}}catch(e){}}}return full;}
+function textOf(content){return Array.isArray(content)?content.map(p=>p.type==="text"?p.text:(p.type==="image"?"[이미지 첨부]":"")).join("\n"):(content||"");}
+async function ollamaListModels(url,timeoutMs=3000){const base=(url||"http://127.0.0.1:11434").replace(/\/$/,"");const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),timeoutMs);try{const res=await fetch(base+"/api/tags",{signal:ctrl.signal});if(!res.ok)throw new Error("Ollama "+res.status);const d=await res.json();return (d.models||[]).map(m=>m.name);}finally{clearTimeout(t);}}
+async function callOllama({url,model,system,messages,maxTokens=2000,stream=false,onDelta,signal}){const base=(url||"http://127.0.0.1:11434").replace(/\/$/,"");const msgs=[];if(system)msgs.push({role:"system",content:system});for(const m of messages)msgs.push({role:m.role,content:textOf(m.content)});const res=await fetch(base+"/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({model,messages:msgs,stream:!!stream,options:{num_predict:maxTokens,num_ctx:8192}}),signal});if(!res.ok){let d="";try{d=(await res.json()).error||""}catch(e){}throw new Error("Ollama "+res.status+(d?" · "+d:""));}if(!stream){const data=await res.json();return (data.message&&data.message.content)||"";}const rd=res.body.getReader();const dec=new TextDecoder();let buf="",full="";while(true){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let nl;while((nl=buf.indexOf("\n"))>=0){const ln=buf.slice(0,nl).trim();buf=buf.slice(nl+1);if(!ln)continue;try{const evt=JSON.parse(ln);if(evt.message?.content){full+=evt.message.content;onDelta&&onDelta(full,evt.message.content);}}catch(e){}}}return full;}
+const WEBLLM_PREFERRED=["Qwen2.5-3B-Instruct-q4f16_1-MLC","Qwen2.5-7B-Instruct-q4f16_1-MLC","Llama-3.2-3B-Instruct-q4f16_1-MLC"];
+const webllmState={lib:null,engine:null,modelId:null};const webllmLoader={active:false,progress:0,text:"",notify:null,set(a,p,t){this.active=a;this.progress=p;this.text=t;this.notify&&this.notify();}};
+function hasWebGPU(){return typeof navigator!=="undefined"&&!!navigator.gpu;}
+async function loadWebLLMLib(){if(!webllmState.lib)webllmState.lib=await import("https://esm.run/@mlc-ai/web-llm");return webllmState.lib;}
+async function getWebLLMModels(){const w=await loadWebLLMLib();return (w.prebuiltAppConfig?.model_list||[]).map(m=>m.model_id);}
+async function ensureWebLLM(modelId){if(!hasWebGPU())throw new Error("WebGPU 미지원");if(webllmState.engine&&webllmState.modelId===modelId)return webllmState.engine;const w=await loadWebLLMLib();const ids=(w.prebuiltAppConfig?.model_list||[]).map(m=>m.model_id);let id=modelId;if(!ids.includes(id))id=WEBLLM_PREFERRED.find(x=>ids.includes(x))||ids[0];if(webllmState.engine){try{await webllmState.engine.unload()}catch(e){}webllmState.engine=null;}webllmLoader.set(true,0,"브라우저 AI 준비 중…");let le=null;try{for(let a=1;a<=4;a++){try{webllmState.engine=await w.CreateMLCEngine(id,{initProgressCallback:(r)=>webllmLoader.set(true,r.progress||0,(a>1?"(재시도 "+a+") ":"")+(r.text||""))},{context_window_size:8192});webllmState.modelId=id;le=null;break;}catch(e){le=e;await new Promise(r=>setTimeout(r,1500));}}}finally{webllmLoader.set(false,1,"");}if(le)throw new Error("브라우저 AI 다운로드 실패");return webllmState.engine;}
+async function callWebLLM({model,system,messages,maxTokens=2000,stream=false,onDelta}){const eng=await ensureWebLLM(model);const msgs=[];if(system)msgs.push({role:"system",content:system});for(const m of messages)msgs.push({role:m.role,content:textOf(m.content)});const cap=Math.min(maxTokens,3600);if(stream){let full="";const ch=await eng.chat.completions.create({messages:msgs,stream:true,max_tokens:cap});for await(const c of ch){const d=(c.choices&&c.choices[0]&&c.choices[0].delta&&c.choices[0].delta.content)||"";if(d){full+=d;onDelta&&onDelta(full,d);}}return full;}const r=await eng.chat.completions.create({messages:msgs,max_tokens:cap});return (r.choices&&r.choices[0]&&r.choices[0].message&&r.choices[0].message.content)||"";}
+const manualBridge={queue:[],notify:null,request(p,m){return new Promise((res,rej)=>{this.queue.push({id:uid("m"),promptText:p,meta:m||{},resolve:res,reject:rej});this.notify&&this.notify();})},current(){return this.queue[0]||null},count(){return this.queue.length},resolveCurrent(t){const c=this.queue.shift();if(c)c.resolve(t);this.notify&&this.notify();},rejectCurrent(e){const c=this.queue.shift();if(c)c.reject(e||new Error("취소"));this.notify&&this.notify();}};
+async function callManual({system,messages,onDelta,meta}){let t="";if(system)t+=system+"\n\n";const hasImg=messages.some(m=>Array.isArray(m.content)&&m.content.some(p=>p.type==="image"));t+=messages.map(m=>textOf(m.content)).join("\n\n");if(hasImg)t+="\n\n(※ 이미지 작업: 챗봇에 이미지를 직접 올린 뒤 위 지시를 붙여넣으세요.)";const out=await manualBridge.request(t,meta);onDelta&&onDelta(out,out);return out;}
+async function runLLM(settings,opts){const b=settings.backend||"manual";if(b==="ollama")return callOllama({url:settings.ollamaUrl,model:settings.ollamaModel,...opts});if(b==="webllm")return callWebLLM({model:settings.webllmModel,...opts});if(b==="manual")return callManual(opts);return callClaude({apiKey:settings.apiKey,model:settings.model,...opts});}
+function backendReady(s){const b=s.backend||"manual";if(b==="manual")return true;if(b==="ollama")return !!s.ollamaModel;if(b==="webllm")return hasWebGPU();return !!(s.apiKey&&s.apiKey.length>10);}
+function backendLabel(s){const b=s.backend||"manual";if(b==="manual")return "수동/챗GPT 모드";if(b==="ollama")return "로컬 Ollama"+(s.ollamaModel?" · "+s.ollamaModel:"");if(b==="webllm")return "브라우저 내장 AI";return "Anthropic API";}
+function backendVision(s){return (s.backend||"manual")==="api"||(s.backend||"manual")==="manual";}
+
+/* ===== 프롬프트 ===== */
+const SYS="당신은 디자인 시스템·핸드오프 전문가입니다. 토큰·컴포넌트·접근성을 정확히 명세하고 개발 친화적으로 정리합니다. 한국어로, JSON 요청 시 순수 JSON만 출력합니다.";
+function buildWireframePrompt(goal,content,flow){return `다음 화면의 와이어프레임 구성을 설계하세요(생성형 UI 입력용). 화면 목적: ${goal} / 주요 콘텐츠: ${content||"(미정)"}${flow?" / 흐름: "+flow:""}
+레이아웃 영역(헤더·본문·액션)과 각 영역의 컴포넌트·우선순위, 상태(빈/로딩/에러)를 정의. JSON만:
+{ "regions":[{"name":"영역명","components":["컴포넌트"],"states":["빈|로딩|에러 등"],"note":"우선순위/비고"}] }
+영역은 위→아래 화면 순서대로. 모두 한국어.`;}
+function buildTokenPrompt(inventory){return `아래 스타일 인벤토리를 디자인 토큰으로 정리하세요. 유사 값 통합, 시맨틱 토큰명(--로 시작), 중복/예외 표시, 마이그레이션 우선순위. JSON만:
+{ "tokens":{"color":{"--color-...":"#값"},"space":{"--space-...":"값"},"type":{"--font-...":"값"}}, "issues":["중복/예외"], "migration":["우선순위 순서"] }
+
+[인벤토리]
+${inventory}`;}
+function buildCodeSpecPrompt(component){return `아래 컴포넌트의 개발 핸드오프 스펙을 작성하세요. JSON만:
+{ "layout":"레이아웃·간격·정렬·반응형 규칙", "tokens":[{"token":"--토큰","usage":"어디에 쓰이나"}], "variants":["variant 설명"], "props":[{"name":"prop","type":"타입","desc":"설명"}], "a11y":["라벨/역할/포커스 등"], "snippet":"간단한 구현 스니펫(JSX 또는 HTML)" }
+
+[컴포넌트]
+${component||"(이미지 참조)"}`;}
+function buildChangelogPrompt(changes){return `아래 변경 이력으로 릴리즈 노트를 작성하세요. 사용자 영향 큰 항목 우선, 평이하게. JSON만:
+{ "added":["추가"], "changed":["변경"], "fixed":["수정"], "removed":["제거"], "notes":"마이그레이션·주의사항" }
+
+[변경이력]
+${changes}`;}
+
+/* ===== UI ===== */
+function Spinner({size=18}){return <span className="inline-block animate-spin rounded-full border-2 border-slate-300 border-t-brand align-[-2px]" style={{width:size,height:size}}/>;}
+function Btn({children,onClick,variant="primary",size="md",disabled,className,...rest}){const v={primary:"bg-brand text-white hover:bg-brand-hover shadow-sm",soft:"bg-brand-light text-brand-hover hover:bg-[#e3e6f7]",ghost:"text-slate-600 hover:bg-slate-100",outline:"border border-hair bg-white text-slate-700 hover:bg-slate-50",danger:"text-rose-600 hover:bg-rose-50"}[variant];const s={sm:"px-3 py-1.5 text-[13px]",md:"px-4 py-2.5 text-sm",lg:"px-5 py-3 text-[15px]"}[size];return <button onClick={onClick} disabled={disabled} className={cx("inline-flex items-center justify-center gap-2 rounded-[10px] font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed",v,s,className)} {...rest}>{children}</button>;}
+function Field({label,hint,children}){return <label className="block"><div className="mb-1.5 flex items-baseline gap-2"><span className="text-sm font-semibold text-ink">{label}</span>{hint&&<span className="text-[13px] text-slate-400">{hint}</span>}</div>{children}</label>;}
+const inputVisual="rounded-[10px] border border-hair bg-white px-3.5 py-2.5 text-[15px] text-ink placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 transition";
+const inputCls="w-full "+inputVisual;
+function Card({children,className}){return <div className={cx("rounded-2xl border border-hair bg-white shadow-soft",className)}>{children}</div>;}
+function Chip({children,className}){return <span className={cx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 ring-inset",className||"bg-slate-100 text-slate-600 ring-slate-200/60")}>{children}</span>;}
+function Toast({toast}){if(!toast)return null;const m={info:"bg-ink",error:"bg-rose-600",ok:"bg-brand-hover"};return <div className="fixed bottom-7 left-1/2 z-[70] -translate-x-1/2"><div className={cx("rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-pop fade-in",m[toast.type]||m.info)}>{toast.msg}</div></div>;}
+function WsSave({title,getText,toast}){const[d,setD]=useState(false);return <Btn size="sm" variant="soft" onClick={()=>{const t=getText&&getText();if(!t||!String(t).trim()){toast&&toast("error","저장할 결과가 없어요");return;}wsAdd(title,t);setD(true);toast&&toast("ok","보관함에 저장됨 — 다른 도구·앱에서 가져올 수 있어요");setTimeout(()=>setD(false),1600);}}>{d?"✓ 저장됨":"📤 보관함"}</Btn>;}
+function WsPull({onPick,label}){const arr=wsLoad();if(!arr.length)return null;return <select className={cx(inputVisual,"mb-2 w-full py-1.5 text-[13px]")} defaultValue="" onChange={e=>{const a=arr.find(x=>x.id===e.target.value);if(a&&onPick)onPick(a.text);e.target.value="";}}><option value="">{label||"📥 보관함에서 가져오기…"}</option>{arr.map(a=><option key={a.id} value={a.id}>{a.title} · {a.at}</option>)}</select>;}
+function WorkspaceModal({onClose,toast}){const[,f]=useState(0);const[edit,setEdit]=useState(null);const[draft,setDraft]=useState("");const arr=wsLoad();return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={onClose}><Card className="max-h-[88vh] w-full max-w-2xl overflow-y-auto p-6 shadow-pop fade-in"><div onClick={e=>e.stopPropagation()}><div className="mb-4 flex items-center justify-between"><div><h3 className="text-lg font-bold text-ink">📋 보관함</h3><p className="text-[13px] text-slate-400">도구·앱이 공유합니다. 결과를 <b>📤 보관함</b>으로 저장하고, 여기서 <b>편집·확정</b>한 뒤 입력칸 위 <b>📥 가져오기</b>로 다음 단계에 넘기세요.</p></div><button className="text-slate-400 hover:text-ink" onClick={onClose}>✕</button></div>{!arr.length?<p className="rounded-xl bg-slate-50 p-4 text-[14px] text-slate-500">아직 저장된 산출물이 없어요. 결과 카드의 <b>📤 보관함</b> 버튼으로 저장하세요.</p>:<div className="space-y-2">{arr.map(a=><Card key={a.id} className="p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="truncate font-semibold text-ink">{a.title}</div><div className="text-[12px] text-slate-400">{a.at}</div></div><div className="flex shrink-0 gap-1">{edit===a.id?<Btn size="sm" onClick={()=>{wsUpdate(a.id,draft);setEdit(null);toast&&toast("ok","수정 저장됨");}}>저장</Btn>:<Btn size="sm" variant="outline" onClick={()=>{setEdit(a.id);setDraft(a.text);}}>편집</Btn>}<Btn size="sm" variant="outline" onClick={()=>{copyText(a.text);toast&&toast("ok","복사됨");}}>복사</Btn><Btn size="sm" variant="danger" onClick={()=>{wsDel(a.id);if(edit===a.id)setEdit(null);f(n=>n+1);}}>삭제</Btn></div></div>{edit===a.id?<textarea value={draft} onChange={e=>setDraft(e.target.value)} rows={8} className={cx(inputCls,"mt-2 resize-y text-[12px]")}/>:<pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[12px] text-slate-600">{String(a.text).slice(0,600)}</pre>}</Card>)}</div>}{!!arr.length&&<div className="mt-4 flex justify-end gap-2"><Btn size="sm" variant="outline" onClick={()=>download("uxax-workspace.json",JSON.stringify(arr,null,2),"application/json")}>↧ 전체 JSON</Btn><Btn size="sm" variant="ghost" onClick={()=>{if(confirm("보관함 전체를 비울까요?")){wsClear();f(n=>n+1);}}}>전체 비우기</Btn></div>}</div></Card></div>;}
+function WorkspaceFab({toast}){const[open,setOpen]=useState(false);const[,f]=useState(0);useEffect(()=>{const fn=()=>f(n=>n+1);wsBus.notify=fn;return()=>{if(wsBus.notify===fn)wsBus.notify=null;};},[]);const n=wsLoad().length;return <React.Fragment><button onClick={()=>setOpen(true)} className="no-print fixed bottom-5 right-5 z-[60] flex items-center gap-1.5 rounded-full bg-brand px-4 py-2.5 text-[13px] font-bold text-white shadow-pop hover:bg-brand-hover" title="보관함 (도구·앱 공유)">📋 보관함{n?(" "+n):""}</button>{open&&<WorkspaceModal onClose={()=>setOpen(false)} toast={toast}/>}</React.Fragment>;}
+function StepHead({n,title,sub,done}){return <div className="mb-3 flex items-center gap-3"><div className={cx("flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold",done?"bg-emerald-500 text-white":"bg-brand text-white")}>{done?"✓":n}</div><div><div className="text-[17px] font-bold text-ink">{title}</div>{sub&&<div className="text-[13px] text-slate-400">{sub}</div>}</div></div>;}
+/* ===== 학습 레이어 (전체 프로세스 내비 + 초급자 ?도움말 + 예제) ===== */
+const PROCESS=[
+  {id:"P1",file:"P1_리서치스튜디오.html",icon:"🔍",name:"리서치"},
+  {id:"P2",file:"P2_정의스튜디오.html",icon:"🧩",name:"정의"},
+  {id:"P3",file:"P3_아이디에이션스튜디오.html",icon:"💡",name:"아이디에이션"},
+  {id:"P4",file:"P4_콘텐츠스튜디오.html",icon:"✎",name:"콘텐츠"},
+  {id:"P5",file:"P5_디자인핸드오프스튜디오.html",icon:"⌘",name:"디자인·핸드오프"},
+  {id:"P6",file:"P6_품질검증스튜디오.html",icon:"✓",name:"품질검증"},
+  {id:"P7",file:"P7_피드백운영스튜디오.html",icon:"📊",name:"피드백·운영"},
+];
+const CURRENT_PHASE="P5";
+function ProcessNav({current}){
+  const i=PROCESS.findIndex(p=>p.id===current);const next=PROCESS[i+1];
+  return <div className="border-t border-hair bg-white/70"><div className="mx-auto flex max-w-[1100px] items-center gap-1 overflow-x-auto px-4 py-2 text-[12px]"><span className="mr-1 shrink-0 font-bold text-slate-400">UX 프로세스</span>{PROCESS.map((p,idx)=>{const cur=p.id===current;return <React.Fragment key={p.id}>{idx>0&&<span className="shrink-0 text-slate-300">→</span>}<a href={"./"+p.file} title={p.id+" "+p.name+" 단계로 이동"} className={cx("flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 font-semibold transition",cur?"bg-brand text-white":"text-slate-500 hover:bg-slate-100")}><span>{p.icon}</span><span>{p.id}</span><span className={cur?"":"hidden sm:inline"}>{p.name}</span></a></React.Fragment>;})}<span className="ml-2 hidden shrink-0 text-slate-400 md:inline">· 지금 <b className="text-brand-hover">{current} {PROCESS[i]?.name}</b>{next?<> · 다음 <b className="text-slate-500">{next.id} {next.name}</b></>:""}</span></div></div>;
+}
+function HelpCue({title,faqs,settings,openSettings,toast}){
+  const[open,setOpen]=useState(false);const[q,setQ]=useState("");const[a,setA]=useState("");const[busy,setBusy]=useState(false);
+  const ask=async()=>{if(!q.trim())return;if(!backendReady(settings)){toast&&toast("error","AI 엔진을 먼저 설정하세요(⚙)");openSettings&&openSettings();return;}setBusy(true);setA("");try{const out=await runLLM(settings,{system:"당신은 UX 프로세스를 가르치는 친절한 시니어 멘토입니다. UX·개발을 잘 모르는 초급 디자이너에게 전문용어는 풀어서, 쉬운 한국어로 3~5문장으로 답합니다.",messages:[{role:"user",content:(title?"["+title+"] ":"")+q}],maxTokens:500,stream:false,meta:{who:"학습 도움말"}});setA(out||"(답이 비었어요)");}catch(e){setA("실패: "+(e.message||e));}finally{setBusy(false);}};
+  return <span className="relative inline-block align-middle"><button type="button" onClick={()=>setOpen(o=>!o)} title="이게 뭔지 물어보기" className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-light text-[12px] font-bold text-brand-hover hover:bg-brand hover:text-white">?</button>{open&&<div className="absolute left-0 top-7 z-[75] w-72 rounded-xl border border-hair bg-white p-3 text-left shadow-pop fade-in" onClick={e=>e.stopPropagation()}><div className="mb-1.5 flex items-center justify-between"><span className="text-[12px] font-bold text-brand-hover">❔ {title||"도움말"}</span><button className="text-slate-400 hover:text-ink" onClick={()=>setOpen(false)}>✕</button></div><ul className="space-y-1.5 text-[12.5px] leading-relaxed text-slate-600">{(faqs||[]).map((f,i)=><li key={i}><b className="text-ink">{f.q}</b><div>{f.a}</div></li>)}</ul><div className="mt-2 border-t border-hair pt-2"><div className="text-[11px] font-semibold text-slate-400">더 궁금하면 AI 멘토에게</div><div className="mt-1 flex gap-1"><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")ask();}} placeholder="예: 이 단계는 왜 해요?" className={cx(inputVisual,"min-w-0 flex-1 py-1 text-[12px]")}/><Btn size="sm" onClick={ask} disabled={busy}>{busy?<Spinner size={12}/>:"질문"}</Btn></div>{a&&<div className="mt-2 whitespace-pre-wrap rounded-lg bg-brand-faint p-2 text-[12.5px] leading-relaxed text-slate-700">{a}</div>}</div></div>}</span>;
+}
+const DEMO_WIRE={goal:"상품 상세에서 ‘안전결제로 구매’를 유도",content:"상품 사진, 가격, 판매자 신뢰도(후기·배지), 안전결제 버튼, 배송 옵션",flow:"검색결과 → (이 화면) → 안전결제"};
+const WIRE_FAQ=[{q:"와이어프레임이 뭐예요?",a:"색·폰트 없이 ‘무엇이 어디에 있는지’ 구조만 잡은 화면 설계도예요. 디자인 전에 뼈대를 합의해요."},{q:"왜 색·폰트는 안 정해요?",a:"이 단계는 구조·우선순위에 집중해요. 비주얼은 다음 단계(토큰·시안)에서 입혀요."}];
+const DEMO_TOKEN="#5e6ad2, #5f6bd0, #4f5bd5, #fff, #fbfbfd\nPretendard 700 24px, 16px, 15px, 13px\nspacing: 4 8 12 16 24 32";
+const TOKEN_FAQ=[{q:"디자인 토큰이 뭐예요?",a:"색·간격·글꼴 같은 디자인 값에 이름을 붙여 표준화한 거예요(예: --color-brand). 디자인·개발이 같은 값을 참조해요."},{q:"왜 통합해요?",a:"같은 ‘파랑’이 미묘하게 여러 값으로 갈라지면 일관성이 깨져요. 비슷한 값을 하나로 묶어 정리해요."}];
+const DEMO_CODESPEC="안전결제 버튼 — 풀폭, 높이 52, 인디고 배경, 좌측에 방패 아이콘, 비활성/로딩 상태 있음, 누르면 안전결제 안내 모달";
+const CODESPEC_FAQ=[{q:"핸드오프가 뭐예요?",a:"디자인을 개발자에게 ‘이렇게 만들어 주세요’ 하고 넘기는 일이에요. 간격·토큰·상태·접근성을 정리해 전달해요."},{q:"props가 뭐예요?",a:"컴포넌트에 넣는 설정값이에요(예: 버튼의 크기·비활성 여부). 개발자가 컴포넌트를 만들 때 기준이 돼요."}];
+const DEMO_CHANGELOG="feat: 안전결제 기본 노출\nfix: 채팅 알림 누락 수정\n디자인: 판매자 신뢰 배지 추가\nrefactor: 결제 모듈 정리\nfeat: 첫 거래 가이드 투어";
+const CHANGELOG_FAQ=[{q:"체인지로그가 뭐예요?",a:"‘무엇이 바뀌었는지’ 정리한 변경 안내문이에요. 개발 커밋을 누구나 이해할 말로 바꿔요."},{q:"Added/Fixed가 뭐예요?",a:"추가된 기능(Added)·고친 버그(Fixed)·바뀐 것(Changed)·삭제(Removed)로 분류한 거예요."}];
+
+function Guide({what,where,why,prep,inputs,steps,tips,note,defaultOpen}){const[open,setOpen]=useState(defaultOpen);const Sec=({icon,title,children})=><div><div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-brand-hover">{icon} {title}</div><div className="text-[14px] leading-relaxed text-slate-600">{children}</div></div>;return <div className="mb-5 overflow-hidden rounded-2xl border border-brand/20 bg-brand-faint"><button className="flex w-full items-center justify-between px-5 py-3 text-left" onClick={()=>setOpen(o=>!o)}><span className="flex items-center gap-2 text-[14px] font-bold text-brand-hover">📖 사용법 · 학습 가이드</span><span className="text-brand-hover">{open?"▲":"▼"}</span></button>{open&&<div className="space-y-4 border-t border-brand/15 px-5 py-4">{what&&<Sec icon="📘" title="무엇을 하나">{what}</Sec>}{where&&<Sec icon="🧭" title="프로세스에서 위치">{where}</Sec>}{why&&<Sec icon="💡" title="왜 중요한가">{why}</Sec>}{prep&&<Sec icon="📎" title="준비물">{prep}</Sec>}{inputs&&<Sec icon="✍️" title="입력 가이드 — 이렇게 넣어야 잘 나와요"><ul className="space-y-2">{inputs.map((x,i)=><li key={i}><b className="text-ink">{x.field}</b> — {x.desc}{x.ex&&<div className="mt-0.5 rounded bg-white/70 px-2 py-1 text-[12px] text-slate-500">예) {x.ex}</div>}</li>)}</ul></Sec>}{steps&&<Sec icon="🪜" title="사용 단계"><ol className="space-y-1.5">{steps.map((s,i)=><li key={i} className="flex gap-2"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">{i+1}</span><span><b className="text-ink">{s.t}</b> — {s.d}</span></li>)}</ol></Sec>}{tips&&<Sec icon="⚠️" title="팁 · 주의"><ul className="ml-4 list-disc space-y-1 text-[13px]">{tips.map((t,i)=><li key={i}>{t}</li>)}</ul></Sec>}{note&&<div className="rounded-lg bg-amber-50 px-3 py-2 text-[13px] text-amber-800">💡 {note}</div>}</div>}</div>;}
+function ProgressOverlay({state,title,emoji}){if(!state.active)return null;const pct=Math.round((state.progress||0)*100);return <div className="fixed inset-0 z-[85] flex items-center justify-center bg-ink/50 p-4"><Card className="w-full max-w-md p-6 text-center shadow-pop fade-in"><div className="mb-3 text-3xl">{emoji}</div><div className="text-base font-bold text-ink">{title}</div><div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand transition-all" style={{width:pct+"%"}}/></div><div className="mt-2 truncate text-[12px] text-slate-400">{state.text||(pct+"%")}</div></Card></div>;}
+function ManualModal({req,queueCount,onSubmit,onCancel}){const[answer,setAnswer]=useState("");const[copied,setCopied]=useState(false);useEffect(()=>{setAnswer("");setCopied(false)},[req&&req.id]);if(!req)return null;const copy=async()=>{await copyText(req.promptText);setCopied(true);setTimeout(()=>setCopied(false),1500)};return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4"><Card className="flex max-h-[90vh] w-full max-w-2xl flex-col shadow-pop fade-in"><div className="flex items-center justify-between border-b border-hair px-5 py-4"><div><h3 className="text-base font-bold text-ink">✍️ 수동 모드</h3><p className="text-[13px] text-slate-400">{req.meta?.who?req.meta.who+" · ":""}복사 → 챗봇 → 답 붙여넣기</p></div>{queueCount>1&&<Chip>대기 {queueCount}</Chip>}</div><div className="flex-1 overflow-y-auto px-5 py-4"><div className="mb-2 flex gap-2"><Btn size="sm" onClick={copy}>{copied?"✓ 복사됨":"📋 복사"}</Btn><Btn size="sm" variant="outline" onClick={()=>{copy();window.open("https://chatgpt.com/","_blank")}}>↗ ChatGPT</Btn></div><pre className="max-h-44 overflow-y-auto whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{req.promptText}</pre><textarea value={answer} onChange={e=>setAnswer(e.target.value)} rows={8} autoFocus className={cx(inputCls,"mt-3 resize-y")} placeholder="답변(JSON) 붙여넣기…"/></div><div className="flex justify-end gap-2 border-t border-hair px-5 py-3"><Btn variant="ghost" onClick={onCancel}>취소</Btn><Btn onClick={()=>onSubmit(answer)} disabled={!answer.trim()}>답변 사용</Btn></div></Card></div>;}
+const BACKENDS=[{id:"webllm",label:"🌐 브라우저 내장 AI",desc:"무료·WebGPU"},{id:"ollama",label:"🖥️ 로컬 Ollama",desc:"무료·내 PC"},{id:"manual",label:"✍️ 수동/챗GPT",desc:"무료·복붙·이미지 가능"},{id:"api",label:"☁️ Anthropic API",desc:"유료·이미지(비전) 지원"}];
+function SettingsModal({settings,onSave,onClose}){const[draft,setDraft]=useState({backend:"manual",ollamaUrl:"http://127.0.0.1:11434",ollamaModel:"",webllmModel:WEBLLM_PREFERRED[0],model:MODELS[0].id,apiKey:"",...settings});const[testing,setTesting]=useState(false);const[tr,setTr]=useState(null);const[om,setOm]=useState([]);const[lo,setLo]=useState(false);const[wm,setWm]=useState([]);const[lw,setLw]=useState(false);const refreshO=useCallback(async()=>{setLo(true);setTr(null);try{const l=await ollamaListModels(draft.ollamaUrl);setOm(l);if(l.length&&!l.includes(draft.ollamaModel))setDraft(d=>({...d,ollamaModel:l[0]}));if(!l.length)setTr({ok:false,msg:"모델 없음 → ollama pull exaone3.5:7.8b"});}catch(e){setTr({ok:false,msg:"연결 실패 — start-ollama.bat"});setOm([]);}finally{setLo(false);}},[draft.ollamaUrl,draft.ollamaModel]);const refreshW=useCallback(async()=>{setLw(true);setTr(null);try{const l=await getWebLLMModels();setWm(l);if(l.length&&!l.includes(draft.webllmModel))setDraft(d=>({...d,webllmModel:WEBLLM_PREFERRED.find(x=>l.includes(x))||l[0]}));}catch(e){setTr({ok:false,msg:"목록 로드 실패"});}finally{setLw(false);}},[draft.webllmModel]);useEffect(()=>{if(draft.backend==="ollama")refreshO();if(draft.backend==="webllm")refreshW();/*eslint-disable-next-line*/},[draft.backend]);const test=async()=>{setTesting(true);setTr(null);try{if(draft.backend==="ollama"){const o=await callOllama({url:draft.ollamaUrl,model:draft.ollamaModel,messages:[{role:"user",content:"OK"}],maxTokens:10});setTr({ok:true,msg:"응답: "+(o||"").slice(0,20)});}else if(draft.backend==="webllm")setTr(hasWebGPU()?{ok:true,msg:"WebGPU ✓"}:{ok:false,msg:"WebGPU 미지원"});else if(draft.backend==="api"){await callClaude({apiKey:draft.apiKey,model:draft.model,maxTokens:16,messages:[{role:"user",content:"ping"}]});setTr({ok:true,msg:"연결 성공!"});}else setTr({ok:true,msg:"수동 모드 바로 사용 가능"});}catch(e){setTr({ok:false,msg:e.message});}finally{setTesting(false);}};return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={onClose}><Card className="max-h-[90vh] w-full max-w-lg overflow-y-auto p-6 shadow-pop fade-in"><div onClick={e=>e.stopPropagation()}><div className="mb-5 flex items-center justify-between"><h3 className="text-lg font-bold text-ink">설정 · AI 엔진</h3><button className="text-slate-400 hover:text-ink" onClick={onClose}>✕</button></div><div className="space-y-5"><div><div className="mb-2 text-sm font-semibold text-ink">AI 엔진 <span className="font-normal text-slate-400">(무료 우선 · 모든 탭 공유)</span></div><div className="grid grid-cols-2 gap-2">{BACKENDS.map(b=><button key={b.id} onClick={()=>{setDraft(d=>({...d,backend:b.id}));setTr(null);}} className={cx("rounded-xl border p-3 text-left transition",draft.backend===b.id?"border-brand bg-brand-light":"border-hair hover:border-slate-300")}><div className="text-[13px] font-bold text-ink">{b.label}</div></button>)}</div><p className="mt-2 text-[13px] text-slate-400">{(BACKENDS.find(b=>b.id===draft.backend)||{}).desc}</p></div>{draft.backend==="webllm"&&<div className="space-y-3 rounded-xl bg-slate-50 p-4"><div className="text-[13px] font-semibold">{hasWebGPU()?<span className="text-emerald-600">WebGPU ✓</span>:<span className="text-rose-600">WebGPU 미지원</span>}</div><Field label="모델"><div className="flex gap-2"><select value={draft.webllmModel} onChange={e=>setDraft({...draft,webllmModel:e.target.value})} className={cx(inputVisual,"min-w-0 flex-1")}>{(wm.length?wm:[draft.webllmModel]).map(m=><option key={m} value={m}>{m}</option>)}</select><Btn variant="outline" size="sm" onClick={refreshW} disabled={lw}>{lw?<Spinner size={14}/>:"↻"}</Btn></div></Field></div>}{draft.backend==="ollama"&&<div className="space-y-3 rounded-xl bg-slate-50 p-4"><Field label="주소"><input className={inputCls} value={draft.ollamaUrl} onChange={e=>setDraft({...draft,ollamaUrl:e.target.value.trim()})}/></Field><Field label="모델"><div className="flex gap-2"><select value={draft.ollamaModel} onChange={e=>setDraft({...draft,ollamaModel:e.target.value})} className={cx(inputVisual,"min-w-0 flex-1")}>{!om.length&&<option value="">— 없음 —</option>}{om.map(m=><option key={m} value={m}>{m}</option>)}</select><Btn variant="outline" size="sm" onClick={refreshO} disabled={lo}>{lo?<Spinner size={14}/>:"↻"}</Btn></div></Field></div>}{draft.backend==="manual"&&<div className="rounded-xl bg-slate-50 p-4 text-[13px] text-slate-600">코드 스펙에 이미지가 필요하면 챗봇에 이미지를 직접 올린 뒤 프롬프트를 붙여넣으세요.</div>}{draft.backend==="api"&&<div className="space-y-3 rounded-xl bg-slate-50 p-4"><Field label="API 키"><input type="password" className={inputCls} value={draft.apiKey} placeholder="sk-ant-..." onChange={e=>setDraft({...draft,apiKey:e.target.value.trim()})}/></Field><Field label="모델"><select value={draft.model} onChange={e=>setDraft({...draft,model:e.target.value})} className={inputCls}>{MODELS.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select></Field></div>}<div className="flex items-center gap-3"><Btn variant="outline" size="sm" onClick={test} disabled={testing}>{testing?<Spinner size={14}/>:"🔌"} 연결 테스트</Btn>{tr&&<span className={cx("text-sm",tr.ok?"text-brand-hover":"text-rose-600")}>{tr.msg}</span>}</div></div><div className="mt-6 flex justify-end gap-2"><Btn variant="ghost" onClick={onClose}>취소</Btn><Btn onClick={()=>onSave(draft)}>저장</Btn></div></div></Card></div>;}
+
+/* ===== ① 와이어프레임 명세 ===== */
+function WirePanel({settings,openSettings,toast}){
+  const K="uxax_p4a1_v1";const sv=load(K,{});
+  const[goal,setGoal]=useState(sv.goal||"");const[content,setContent]=useState(sv.content||"");const[flow,setFlow]=useState(sv.flow||"");const[res,setRes]=useState(sv.res||null);const[busy,setBusy]=useState(false);
+  useEffect(()=>{save(K,{goal,content,flow,res})},[goal,content,flow,res]);
+  const run=async()=>{if(!goal.trim()){toast("error","화면 목적을 입력하세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setRes(null);try{const out=await runLLM(settings,{system:SYS,messages:[{role:"user",content:buildWireframePrompt(goal,content,flow)}],maxTokens:2200,stream:false,meta:{who:"와이어프레임 명세"}});const p=parseJsonLoose(out);setRes(p&&p.regions?p.regions:{raw:out});if(p&&p.regions)setRes(p.regions);toast("ok","명세 완료");}catch(e){toast("error","실패: "+(e.message||e));}finally{setBusy(false);}};
+  const regions=Array.isArray(res)?res:null;
+  const md=()=>{if(!regions)return res?.raw||"";let m="# 와이어프레임 명세\n**목적:** "+goal+"\n";regions.forEach((r,i)=>{m+=`\n## ${i+1}. ${S(r.name)}\n`;arr(r.components).forEach(c=>m+=`- ${S(c)}\n`);if(arr(r.states).length)m+=`- 상태: ${arr(r.states).map(S).join(", ")}\n`;if(r.note)m+=`- 비고: ${S(r.note)}\n`;});return m;};
+  return <div className="space-y-6">
+    <Guide defaultOpen={!regions}
+      what="화면 목적과 콘텐츠를 넣으면 레이아웃 영역(헤더·본문·액션 등)과 영역별 컴포넌트·상태(빈/로딩/에러)를 정의한 와이어프레임 ‘설계 명세’를 만들고, 저-fi 블록 미리보기로 구조를 보여 줍니다."
+      where="UX 4단계 ‘디자인(Design)’의 시작. P3 플로우·IA가 정해진 뒤 개별 화면의 뼈대를 잡습니다. 이 명세는 Figma First Draft 등 생성형 UI 입력이나 직접 와이어 작업의 출발점이 됩니다."
+      why="고품질 시안을 그리기 전에 ‘무엇이 어디에, 어떤 상태로’ 있어야 하는지 구조를 먼저 합의하면 손이 덜 듭니다. 빈/로딩/에러 상태를 처음부터 챙겨 누락을 줄입니다."
+      inputs={[
+        {field:"화면 목적", desc:"이 화면이 사용자가 무엇을 하게 하는지(한 가지 핵심 목표).", ex:"상품 상세에서 ‘안전결제로 구매’를 유도"},
+        {field:"주요 콘텐츠", desc:"화면에 담을 정보·요소를 나열. 중요도 순으로 적으면 우선순위가 반영됩니다.", ex:"상품 사진, 가격, 판매자 신뢰도, 안전결제 버튼, 배송 옵션"},
+        {field:"흐름 맥락 (선택)", desc:"이전/다음 화면. 넣으면 진입·이탈 동선이 명세에 반영됩니다.", ex:"검색결과 → (이 화면) → 결제"},
+      ]}
+      steps={[
+        {t:"목적·콘텐츠 입력",d:"이 화면이 무엇을 하게 하는지, 어떤 정보를 담는지 적습니다."},
+        {t:"명세 생성",d:"헤더·본문·액션 등 영역과 영역별 컴포넌트·상태(빈/로딩/에러)를 정의합니다."},
+        {t:"검토·활용",d:"저-fi 블록 미리보기로 구조를 확인하고, 생성형 UI 입력/디자인 시작점으로 씁니다. MD로 내보냅니다."},
+      ]}
+      tips={[
+        "이 단계는 ‘설계도’ — 색·폰트 같은 비주얼은 아직 신경 쓰지 말고 구조·우선순위에 집중하세요.",
+        "빈/로딩/에러 상태를 처음부터 정의하면 나중에 빠뜨리지 않습니다.",
+        "MD로 내보내 Figma First Draft 등 생성형 UI의 입력 프롬프트로 그대로 쓰기 좋습니다.",
+      ]}/>
+    <Card className="p-6"><div className="mb-3 flex items-center gap-1"><StepHead n={1} title="입력" done={!!regions}/><HelpCue title="와이어프레임 명세" faqs={WIRE_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div><div className="mb-3"><Btn size="sm" variant="outline" onClick={()=>{setGoal(DEMO_WIRE.goal);setContent(DEMO_WIRE.content);setFlow(DEMO_WIRE.flow);setRes(null);toast("ok","예제 화면 목적·콘텐츠 — ‘와이어 명세 생성’을 눌러보세요");}}>▶ 예제로 해보기</Btn></div>
+      <div className="space-y-4"><Field label="화면 목적"><input className={inputCls} value={goal} onChange={e=>setGoal(e.target.value)} placeholder="예: 상품 상세에서 안전결제로 구매 유도"/></Field><Field label="주요 콘텐츠"><textarea className={cx(inputCls,"resize-y")} rows={2} value={content} onChange={e=>setContent(e.target.value)} placeholder="예: 상품 사진, 가격, 판매자 신뢰도, 안전결제 버튼"/></Field><Field label="흐름 맥락 (선택)"><input className={inputCls} value={flow} onChange={e=>setFlow(e.target.value)} placeholder="예: 검색결과 → (이 화면) → 결제"/></Field></div>
+      <div className="mt-4"><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 와이어 명세 생성 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn></div>
+    </Card>
+    {res&&<Card className="p-6 fade-in"><div className="mb-4 flex items-center justify-between"><StepHead n={2} title="화면 구성" done={true}/>{regions&&<div className="flex gap-2"><WsSave title="와이어프레임 명세" getText={md} toast={toast}/><Btn size="sm" variant="outline" onClick={()=>download("wireframe.md",md())}>↧ MD</Btn></div>}</div>
+      {regions?<div className="grid gap-4 lg:grid-cols-2">
+        <div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">저-fi 미리보기</div><div className="mx-auto max-w-[320px] space-y-2 rounded-xl border border-hair bg-slate-50 p-3">{regions.map((r,i)=><div key={i} className="rounded-lg border border-dashed border-slate-300 bg-white p-2.5"><div className="text-[12px] font-bold text-slate-500">{S(r.name)}</div><div className="mt-1 flex flex-wrap gap-1">{arr(r.components).map((c,j)=><span key={j} className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">{S(c)}</span>)}</div></div>)}</div></div>
+        <div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">영역 명세</div><div className="space-y-2">{regions.map((r,i)=><Card key={i} className="p-3"><div className="font-bold text-ink">{i+1}. {S(r.name)}</div><div className="mt-1 text-[13px] text-slate-600">컴포넌트: {arr(r.components).map(S).join(", ")}</div>{arr(r.states).length>0&&<div className="mt-0.5 text-[12px] text-amber-700">상태: {arr(r.states).map(S).join(", ")}</div>}{r.note&&<div className="mt-0.5 text-[12px] text-slate-400">{S(r.note)}</div>}</Card>)}</div></div>
+      </div>:<pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre>}
+    </Card>}
+    {regions&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ 와이어 명세 완성! 다음 단계 →</span>
+      <Btn size="sm" onClick={()=>{wsAdd("와이어프레임 명세",md());toast("ok","보관함 저장 — ③ 코드 스펙 탭에서 이어가세요");location.hash="codespec";}}>📤 저장하고 ③ 코드 스펙으로 →</Btn>
+      <HelpCue title="와이어 다음은?" faqs={[{q:"와이어 다음은요?",a:"잡은 구조에 토큰(②)을 입히고, ③ 코드 스펙으로 개발에 넘길 명세를 만들어요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+  </div>;
+}
+
+/* ===== ② 디자인 토큰 ===== */
+function TokenPanel({settings,openSettings,toast}){
+  const K="uxax_p4a2_v1";const sv=load(K,{});
+  const[inv,setInv]=useState(sv.inv||"");const[res,setRes]=useState(sv.res||null);const[busy,setBusy]=useState(false);
+  useEffect(()=>{save(K,{inv,res})},[inv,res]);
+  const run=async()=>{if(!inv.trim()){toast("error","스타일 인벤토리를 입력하세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setRes(null);try{const out=await runLLM(settings,{system:SYS,messages:[{role:"user",content:buildTokenPrompt(inv)}],maxTokens:2400,stream:false,meta:{who:"디자인 토큰"}});const p=parseJsonLoose(out);setRes(p&&typeof p==="object"?p:{raw:out});toast("ok","토큰 정리 완료");}catch(e){toast("error","실패: "+(e.message||e));}finally{setBusy(false);}};
+  const tokensToCss=()=>{if(!res||!res.tokens)return "";let css=":root{\n";["color","space","type"].forEach(k=>{const o=res.tokens[k]||{};if(Object.keys(o).length)css+=`  /* ${k} */\n`;Object.entries(o).forEach(([t,v])=>{css+=`  ${t.startsWith("--")?t:"--"+t}: ${v};\n`;});});css+="}";return css;};
+  return <div className="space-y-6">
+    <Guide defaultOpen={!res}
+      what="흩어진 스타일 값(색·폰트·간격)을 모아 유사한 것을 통합하고, 시맨틱 디자인 토큰(예: --color-brand)으로 정리해 CSS 변수/JSON으로 내보내 주는 도구입니다. 중복·예외와 마이그레이션 우선순위도 제시합니다."
+      where="UX 4단계 ‘디자인’의 시스템화. 화면이 늘어 스타일이 제각각이 됐을 때, 또는 디자인 시스템을 세울 때 씁니다. 정리된 토큰은 ③ 코드 스펙·디자인 QA의 기준이 됩니다."
+      why="같은 ‘파랑’이 #5e6ad2·#5f6bd0처럼 미묘하게 갈라지면 일관성이 무너지고 유지보수가 어렵습니다. 토큰으로 표준화하면 디자인·개발이 같은 값을 참조해 품질·속도가 올라갑니다."
+      inputs={[
+        {field:"스타일 인벤토리", desc:"기존 디자인의 색·폰트·간격 값을 나열(중복·유사값 포함해도 됨). Figma 플러그인 export나 CSS 값을 붙여넣기.", ex:"#5e6ad2, #5f6bd0, #4f5bd5 / Pretendard 700 24px·16px·15px / spacing 4 8 12 16 24"},
+      ]}
+      steps={[
+        {t:"인벤토리 붙여넣기",d:"흩어진 색/폰트/간격 값을 나열합니다(중복·유사값 포함해도 됨)."},
+        {t:"토큰화 실행",d:"유사 값을 통합하고 시맨틱 토큰명을 제안하며, 중복/예외와 마이그레이션 순서를 정리합니다."},
+        {t:"적용·내보내기",d:"색칩으로 확인하고 CSS 변수/JSON으로 내보내 코드 스펙(③)·QA에 연결합니다."},
+      ]}
+      tips={[
+        "토큰명은 ‘쓰임(시맨틱)’ 기준이 좋습니다: --color-primary가 --color-indigo보다 오래갑니다.",
+        "자동 제안을 팀 네이밍 규칙에 맞춰 다듬어 확정하세요(이 단계가 일관성의 핵심).",
+        "‘마이그레이션 우선순위’는 기존 값을 토큰으로 바꿔갈 순서 — 가장 많이 쓰인 값부터.",
+      ]}/>
+    <Card className="p-6"><div className="mb-3 flex items-center gap-1"><StepHead n={1} title="스타일 인벤토리" done={!!(res&&res.tokens)}/><HelpCue title="디자인 토큰" faqs={TOKEN_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div><div className="mb-3"><Btn size="sm" variant="outline" onClick={()=>{setInv(DEMO_TOKEN);setRes(null);toast("ok","예제 스타일 값 — ‘토큰 정리’를 눌러보세요");}}>▶ 예제로 해보기</Btn></div>
+      <WsPull onPick={t=>setInv(inv?inv+"\n"+t:t)} label="📥 보관함에서 가져오기 (스타일 인벤토리 등)"/>
+      <textarea className={cx(inputCls,"resize-y")} rows={6} value={inv} onChange={e=>setInv(e.target.value)} placeholder={"#5e6ad2, #5f6bd0, #4f5bd5, #fff, #fbfbfd\nPretendard 700 24px, 16px, 15px, 13px\nspacing: 4 8 12 16 24 32"}/>
+      <div className="mt-4"><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 토큰 정리 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn></div>
+    </Card>
+    {res&&<Card className="p-6 fade-in"><div className="mb-4 flex items-center justify-between"><StepHead n={2} title="디자인 토큰" done={true}/>{res.tokens&&<div className="flex gap-2"><WsSave title="디자인 토큰(CSS)" getText={tokensToCss} toast={toast}/><Btn size="sm" variant="outline" onClick={()=>download("tokens.css",tokensToCss(),"text/css")}>↧ CSS</Btn><Btn size="sm" variant="outline" onClick={()=>download("tokens.json",JSON.stringify(res.tokens,null,2),"application/json")}>↧ JSON</Btn></div>}</div>
+      {res.tokens?<div className="space-y-4">{["color","space","type"].map(k=>res.tokens[k]&&Object.keys(res.tokens[k]).length?<div key={k}><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-slate-400">{k}</div><div className="grid gap-1.5 sm:grid-cols-2"><div className="contents">{Object.entries(res.tokens[k]).map(([t,v])=><div key={t} className="flex items-center gap-2 text-[13px]">{k==="color"&&/^#|rgb/.test(String(v))&&<span className="h-5 w-5 shrink-0 rounded ring-1 ring-hair" style={{background:String(v)}}/>}<code className="rounded bg-slate-100 px-1.5 py-0.5">{t}</code><span className="text-slate-500">{S(v)}</span></div>)}</div></div></div>:null)}
+      {!!arr(res.issues).length&&<div><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-slate-400">이슈</div><ul className="ml-5 list-disc space-y-1 text-[13px] text-amber-700">{res.issues.map((x,i)=><li key={i}>{S(x)}</li>)}</ul></div>}
+      {!!arr(res.migration).length&&<div><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-slate-400">마이그레이션 우선순위</div><ol className="ml-5 list-decimal space-y-1 text-[13px] text-slate-600">{res.migration.map((x,i)=><li key={i}>{S(x)}</li>)}</ol></div>}
+      </div>:<pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre>}
+    </Card>}
+    {res&&res.tokens&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ 토큰 정리 완성! 다음 단계 →</span>
+      <Btn size="sm" onClick={()=>{wsAdd("디자인 토큰(CSS)",tokensToCss());toast("ok","보관함 저장 — ③ 코드 스펙 탭에서 이어가세요");location.hash="codespec";}}>📤 저장하고 ③ 코드 스펙으로 →</Btn>
+      <HelpCue title="토큰 다음은?" faqs={[{q:"토큰 다음은요?",a:"정리한 토큰을 ③ 코드 스펙에서 컴포넌트가 참조하도록 연결해 개발에 일관되게 넘겨요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+  </div>;
+}
+
+/* ===== ③ 코드 스펙 (비전 옵션) ===== */
+function CodeSpecPanel({settings,openSettings,toast}){
+  const K="uxax_p6a1_v1";const sv=load(K,{});
+  const[component,setComponent]=useState(sv.component||"");const[res,setRes]=useState(sv.res||null);const[busy,setBusy]=useState(false);const[img,setImg]=useState(null);
+  useEffect(()=>{save(K,{component,res})},[component,res]);
+  const onImg=async(f)=>{if(!f)return;try{const r=await fileToImagePart(f);setImg(r);}catch(e){toast("error","이미지 로드 실패");}};
+  const run=async()=>{if(!component.trim()&&!img){toast("error","컴포넌트 설명 또는 이미지를 입력하세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setRes(null);try{const prompt=buildCodeSpecPrompt(component);let content=prompt;if(img&&backendVision(settings))content=[img.part,{type:"text",text:prompt}];const out=await runLLM(settings,{system:SYS,messages:[{role:"user",content}],maxTokens:2600,stream:false,meta:{who:"코드 스펙"}});const p=parseJsonLoose(out);setRes(p&&typeof p==="object"?p:{raw:out});toast("ok","스펙 완료");}catch(e){toast("error","실패: "+(e.message||e));}finally{setBusy(false);}};
+  const md=()=>{if(!res)return "";if(res.raw)return res.raw;let m="# 코드 핸드오프 스펙\n\n## 레이아웃\n"+S(res.layout)+"\n";if(arr(res.tokens).length){m+="\n## 토큰\n";arr(res.tokens).forEach(t=>m+=`- \`${S(t.token)}\` — ${S(t.usage)}\n`);}if(arr(res.variants).length){m+="\n## 변형\n";arr(res.variants).forEach(v=>m+=`- ${S(v)}\n`);}if(arr(res.props).length){m+="\n## Props\n";arr(res.props).forEach(p=>m+=`- \`${S(p.name)}\`: ${S(p.type)} — ${S(p.desc)}\n`);}if(arr(res.a11y).length){m+="\n## 접근성\n";arr(res.a11y).forEach(a=>m+=`- ${S(a)}\n`);}if(res.snippet)m+="\n## 스니펫\n```\n"+S(res.snippet)+"\n```\n";return m;};
+  return <div className="space-y-6">
+    <Guide defaultOpen={!res}
+      what="컴포넌트(설명 또는 이미지)를 넣으면 개발 핸드오프 스펙 — 레이아웃·간격 규칙, 사용 디자인 토큰, variant, props(타입·설명), 접근성 요구, 구현 스니펫 — 을 만들어 주는 도구입니다."
+      where="UX 6단계 ‘핸드오프(Handoff)’. 디자인을 개발로 넘기는 지점입니다. ② 디자인 토큰과 짝을 이뤄, ‘무엇을 어떤 값으로 구현할지’를 개발자에게 명확히 전달합니다."
+      why="수작업 스펙 작성·측정은 시간이 많이 들고 누락이 잦습니다(특히 상태·접근성). 구조화 스펙으로 넘기면 디자인-구현 불일치와 재작업이 줄고, 접근성도 처음부터 챙겨집니다."
+      inputs={[
+        {field:"컴포넌트 이미지 (선택)", desc:"컴포넌트 캡처. API 또는 수동(챗봇 업로드) 모드에서만 인식합니다(비전).", ex:"버튼/카드/모달 스크린샷"},
+        {field:"컴포넌트 설명", desc:"구조·크기·간격·상태를 글로 설명. 이미지가 없어도 이 설명만으로 충분합니다.", ex:"안전결제 버튼 — 풀폭, 높이 52, 인디고 배경, 좌측 방패 아이콘, 비활성/로딩 상태 있음"},
+      ]}
+      steps={[
+        {t:"컴포넌트 입력",d:"설명을 적거나(이미지가 있으면 첨부) 시작합니다."},
+        {t:"스펙 생성",d:"레이아웃·사용 토큰·variant·props·접근성·구현 스니펫을 만듭니다."},
+        {t:"핸드오프",d:"② 토큰과 연결해 개발자에게 전달합니다. MD로 내보냅니다."},
+      ]}
+      tips={[
+        "이미지(비전)는 Anthropic API 또는 수동(챗봇 업로드) 모드에서 동작 — Ollama/브라우저AI는 설명 텍스트로 입력하세요.",
+        "②에서 만든 토큰명을 함께 주면 스펙이 그 토큰을 참조하도록 일관되게 나옵니다.",
+        "‘접근성’ 항목(라벨·역할·포커스)은 개발에서 빠지기 쉬운 부분 — 꼭 반영하세요.",
+      ]}/>
+    <Card className="p-6"><div className="mb-3 flex items-center gap-1"><StepHead n={1} title="컴포넌트 입력" done={!!res}/><HelpCue title="코드 핸드오프 스펙" faqs={CODESPEC_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div><div className="mb-3"><Btn size="sm" variant="outline" onClick={()=>{setComponent(DEMO_CODESPEC);setRes(null);toast("ok","예제 컴포넌트 설명 — ‘코드 스펙 생성’을 눌러보세요");}}>▶ 예제로 해보기</Btn></div>
+      <Field label="컴포넌트 이미지 (선택)" hint={backendVision(settings)?"":"현재 엔진은 이미지 미지원 — 설명으로 입력"}><input type="file" accept="image/*" onChange={e=>onImg(e.target.files[0])} className="block w-full text-[13px] text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-light file:px-3 file:py-2 file:text-brand-hover"/>{img&&<img src={img.url} alt="" className="mt-2 max-h-44 rounded-lg border border-hair"/>}</Field>
+      <Field label="컴포넌트 설명"><textarea className={cx(inputCls,"mt-3 resize-y")} rows={4} value={component} onChange={e=>setComponent(e.target.value)} placeholder="예: 안전결제 버튼 — 풀폭, 높이 52, 인디고 배경, 좌측 방패 아이콘, 비활성/로딩 상태 있음"/></Field>
+      <div className="mt-4"><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 코드 스펙 생성 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn></div>
+    </Card>
+    {res&&<Card className="p-6 fade-in"><div className="mb-4 flex items-center justify-between"><StepHead n={2} title="핸드오프 스펙" done={true}/>{!res.raw&&<div className="flex gap-2"><WsSave title="코드 핸드오프 스펙" getText={md} toast={toast}/><Btn size="sm" variant="outline" onClick={()=>download("code_spec.md",md())}>↧ MD</Btn></div>}</div>
+      {res.raw?<pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre>:<div className="space-y-4 text-[14px]">
+        {res.layout&&<div><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-slate-400">레이아웃</div><p className="text-slate-700">{S(res.layout)}</p></div>}
+        {!!arr(res.tokens).length&&<div><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-slate-400">토큰</div><ul className="space-y-1">{arr(res.tokens).map((t,i)=><li key={i}><code className="rounded bg-slate-100 px-1 text-[12px]">{S(t.token)}</code> <span className="text-slate-500">{S(t.usage)}</span></li>)}</ul></div>}
+        {!!arr(res.props).length&&<div><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-slate-400">Props</div><table className="w-full text-[13px]"><tbody>{arr(res.props).map((p,i)=><tr key={i} className="border-t border-hair"><td className="py-1 pr-2 font-semibold text-ink">{S(p.name)}</td><td className="py-1 pr-2 text-brand-hover">{S(p.type)}</td><td className="py-1 text-slate-500">{S(p.desc)}</td></tr>)}</tbody></table></div>}
+        {!!arr(res.variants).length&&<div><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-slate-400">변형</div><div className="flex flex-wrap gap-1.5">{arr(res.variants).map((v,i)=><Chip key={i}>{S(v)}</Chip>)}</div></div>}
+        {!!arr(res.a11y).length&&<div><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-slate-400">접근성</div><ul className="ml-5 list-disc space-y-1 text-slate-600">{arr(res.a11y).map((a,i)=><li key={i}>{S(a)}</li>)}</ul></div>}
+        {res.snippet&&<div><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-slate-400">스니펫</div><pre className="overflow-x-auto rounded-xl bg-ink p-3 text-[12px] text-slate-100">{S(res.snippet)}</pre></div>}
+      </div>}
+    </Card>}
+    {res&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ 코드 스펙 완성! 다음 단계 →</span>
+      <Btn size="sm" onClick={()=>{wsAdd("코드 핸드오프 스펙",md());toast("ok","보관함 저장 — P6 품질검증에서 📥 가져오기로 이어가세요");location.href="./P6_품질검증스튜디오.html#qa";}}>📤 저장하고 P6 품질검증으로 →</Btn>
+      <HelpCue title="핸드오프 다음은?" faqs={[{q:"코드 스펙 다음은요?",a:"구현된 화면이 디자인대로인지 P6 디자인 QA에서 검증해요(픽셀 비교 등)."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+  </div>;
+}
+
+/* ===== ④ 체인지로그 ===== */
+function ChangelogPanel({settings,openSettings,toast}){
+  const K="uxax_p6a2_v1";const sv=load(K,{});
+  const[changes,setChanges]=useState(sv.changes||"");const[res,setRes]=useState(sv.res||null);const[busy,setBusy]=useState(false);
+  useEffect(()=>{save(K,{changes,res})},[changes,res]);
+  const run=async()=>{if(!changes.trim()){toast("error","변경 이력을 입력하세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setRes(null);try{const out=await runLLM(settings,{system:SYS,messages:[{role:"user",content:buildChangelogPrompt(changes)}],maxTokens:2000,stream:false,meta:{who:"체인지로그"}});const p=parseJsonLoose(out);setRes(p&&typeof p==="object"?p:{raw:out});toast("ok","릴리즈 노트 완료");}catch(e){toast("error","실패: "+(e.message||e));}finally{setBusy(false);}};
+  const md=()=>{if(!res)return "";if(res.raw)return res.raw;let m="# 릴리즈 노트\n";[["Added","added"],["Changed","changed"],["Fixed","fixed"],["Removed","removed"]].forEach(([t,k])=>{if(arr(res[k]).length){m+=`\n## ${t}\n`;arr(res[k]).forEach(x=>m+=`- ${S(x)}\n`);}});if(res.notes)m+="\n## 주의사항\n"+S(res.notes)+"\n";return m;};
+  const Sec=({t,items,color})=>arr(items).length?<div><div className={cx("mb-1 text-[12px] font-bold uppercase tracking-wide",color)}>{t}</div><ul className="ml-5 list-disc space-y-1 text-[14px] text-slate-700">{arr(items).map((x,i)=><li key={i}>{S(x)}</li>)}</ul></div>:null;
+  return <div className="space-y-6">
+    <Guide defaultOpen={!res}
+      what="변경 이력(git log·커밋·이슈·디자인 변경 메모)을 넣으면 Added/Changed/Fixed/Removed로 분류하고, 사용자 영향이 큰 항목을 위로 올린 평이한 릴리즈 노트(체인지로그)를 만들어 주는 도구입니다."
+      where="UX 6단계 ‘핸드오프·개선(Handoff & Iterate)’. 릴리즈/배포 시점에 ‘무엇이 바뀌었는지’를 이해관계자·사용자에게 전달할 때 씁니다. 핸드오프 문서와 함께 나갑니다."
+      why="개발 커밋 로그는 기술 용어투성이라 PM·디자이너·사용자가 이해하기 어렵습니다. 분류·평이화하면 누가 봐도 이해할 수 있는 변경 안내가 되고, 마이그레이션 주의사항을 놓치지 않습니다."
+      inputs={[
+        {field:"변경 이력", desc:"커밋 메시지·이슈 제목·변경 메모를 그대로 붙여넣기(형식 섞여도 됨).", ex:"feat: 안전결제 기본 노출 / fix: 채팅 알림 누락 수정 / 디자인: 신뢰 배지 추가"},
+      ]}
+      steps={[
+        {t:"변경 이력 붙여넣기",d:"커밋/이슈/변경 메모를 그대로 붙여넣습니다."},
+        {t:"생성 실행",d:"Added/Changed/Fixed/Removed로 분류하고 사용자 영향 큰 항목을 우선 정리합니다."},
+        {t:"검토·내보내기",d:"마이그레이션·주의사항을 확인하고 MD 릴리즈 노트로 내보냅니다."},
+      ]}
+      tips={[
+        "사용자 공지용과 개발 내부용은 톤이 다릅니다 — 필요하면 둘로 나눠 정리하세요.",
+        "‘주의사항·마이그레이션’은 배포 사고를 막는 핵심 — 비워두지 말고 확인하세요.",
+        "버전 태그(예: v1.4.0)·날짜를 앞에 붙이면 그대로 릴리즈 노트로 게시 가능합니다.",
+      ]}/>
+    <Card className="p-6"><div className="mb-3 flex items-center gap-1"><StepHead n={1} title="변경 이력" done={!!res}/><HelpCue title="체인지로그·릴리즈노트" faqs={CHANGELOG_FAQ} settings={settings} openSettings={openSettings} toast={toast}/></div><div className="mb-3"><Btn size="sm" variant="outline" onClick={()=>{setChanges(DEMO_CHANGELOG);setRes(null);toast("ok","예제 변경 이력 — ‘릴리즈 노트 생성’을 눌러보세요");}}>▶ 예제로 해보기</Btn></div>
+      <WsPull onPick={t=>setChanges(changes?changes+"\n"+t:t)} label="📥 보관함에서 가져오기 (변경 이력 등)"/>
+      <textarea className={cx(inputCls,"resize-y")} rows={7} value={changes} onChange={e=>setChanges(e.target.value)} placeholder={"feat: 안전결제 기본 노출\nfix: 채팅 알림 누락 수정\n디자인: 신뢰 배지 추가\nrefactor: 결제 모듈 정리 ..."}/>
+      <div className="mt-4"><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 릴리즈 노트 생성 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn></div>
+    </Card>
+    {res&&<Card className="p-6 fade-in"><div className="mb-4 flex items-center justify-between"><StepHead n={2} title="릴리즈 노트" done={true}/>{!res.raw&&<div className="flex gap-2"><WsSave title="릴리즈 노트" getText={md} toast={toast}/><Btn size="sm" variant="outline" onClick={()=>download("changelog.md",md())}>↧ MD</Btn></div>}</div>
+      {res.raw?<pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre>:<div className="space-y-4"><Sec t="✨ Added" items={res.added} color="text-emerald-600"/><Sec t="🔧 Changed" items={res.changed} color="text-brand-hover"/><Sec t="🐞 Fixed" items={res.fixed} color="text-amber-600"/><Sec t="🗑 Removed" items={res.removed} color="text-rose-600"/>{res.notes&&<div className="rounded-xl bg-amber-50 p-3"><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-amber-700">주의사항·마이그레이션</div><p className="text-[13px] text-amber-800">{S(res.notes)}</p></div>}</div>}
+    </Card>}
+    {res&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
+      <span className="text-[14px] font-bold text-ink">✅ 릴리즈 노트 완성! 다음 단계 →</span>
+      <Btn size="sm" onClick={()=>{wsAdd("릴리즈 노트",md());toast("ok","보관함 저장 — P7 운영에서 📥 가져오기로 이어가세요");location.href="./P7_피드백운영스튜디오.html#ops";}}>📤 저장하고 P7 운영으로 →</Btn>
+      <HelpCue title="릴리즈 다음은?" faqs={[{q:"릴리즈 노트 다음은요?",a:"배포 후 P7에서 사용자 피드백·운영 지표를 모아 다음 개선으로 순환해요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
+    </div>}
+  </div>;
+}
+
+/* ===== Root ===== */
+const TABS=[{id:"wire",label:"① 와이어프레임",pid:"P4-A1"},{id:"token",label:"② 디자인 토큰",pid:"P4-A2"},{id:"codespec",label:"③ 코드 스펙",pid:"P6-A1"},{id:"changelog",label:"④ 체인지로그",pid:"P6-A2"}];
+function App(){
+  const[settings,setSettings]=useState(()=>{const s=load(SETTINGS_KEY,null);const fc=(window.UXAX_CONFIG&&window.UXAX_CONFIG.anthropicApiKey)||"";const def={backend:fc?"api":"manual",apiKey:fc,model:MODELS[0].id,ollamaUrl:"http://127.0.0.1:11434",ollamaModel:"",webllmModel:WEBLLM_PREFERRED[0]};return s?{...def,...s}:def;});
+  const[tab,setTab]=useState(()=>{const h=(location.hash||"").replace("#","");return TABS.find(t=>t.id===h)?h:"wire";});
+  const[showSettings,setShowSettings]=useState(false);const[toast,setToastState]=useState(null);const[,force]=useState(0);
+  const ready=backendReady(settings);
+  useEffect(()=>{save(SETTINGS_KEY,settings)},[settings]);useEffect(()=>{location.hash=tab},[tab]);useEffect(()=>{const h=()=>{const x=(location.hash||"").replace("#","");if(TABS.find(t=>t.id===x))setTab(x);};window.addEventListener("hashchange",h);return()=>window.removeEventListener("hashchange",h);},[]);
+  useEffect(()=>{const f=()=>force(n=>n+1);manualBridge.notify=f;webllmLoader.notify=f;return()=>{manualBridge.notify=null;webllmLoader.notify=null;};},[]);
+  const toastFn=useCallback((t,m)=>{setToastState({type:t,msg:m});setTimeout(()=>setToastState(null),3400)},[]);
+  useEffect(()=>{if(settings.backendChosen||settings.backend!=="manual")return;(async()=>{try{const l=await ollamaListModels(settings.ollamaUrl,1500);if(l.length){setSettings(s=>({...s,backend:"ollama",ollamaModel:l[0]}));toastFn("ok","로컬 Ollama 자동 연결");}}catch(e){}})();/*eslint-disable-next-line*/},[]);
+  const openSettings=()=>setShowSettings(true);
+  return <div className="min-h-screen">
+    <header className="sticky top-0 z-40 border-b border-hair bg-canvas/85 backdrop-blur-md">
+      <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-5 py-3"><a href="./index.html" className="rounded-[10px] px-2 py-1.5 text-sm text-slate-500 hover:bg-slate-100">← 홈</a><div className="flex items-center gap-2.5"><div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-brand text-base font-black text-white">⌘</div><div><div className="text-[16px] font-extrabold leading-none tracking-tight text-ink">디자인·핸드오프 스튜디오</div><div className="text-[11px] text-slate-400">와이어·토큰·코드스펙·체인지로그 · 무료</div></div></div><div className="flex-1"/><button onClick={openSettings} className={cx("hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1 ring-inset sm:inline-flex",ready?"bg-emerald-50 text-emerald-600 ring-emerald-100":"bg-amber-50 text-amber-600 ring-amber-100")}><span className={cx("h-1.5 w-1.5 rounded-full",ready?"bg-emerald-500":"bg-amber-500")}/>{backendLabel(settings)}</button><button onClick={openSettings} className="rounded-[10px] p-2 text-slate-500 hover:bg-slate-100" title="설정">⚙</button></div>
+      <ProcessNav current={CURRENT_PHASE}/>
+      <div className="mx-auto max-w-[1100px] overflow-x-auto px-3"><nav className="flex gap-1">{TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} className={cx("flex items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition",tab===t.id?"border-brand text-brand-hover":"border-transparent text-slate-500 hover:text-ink")}>{t.label}<span className="text-[11px] text-slate-400">{t.pid}</span></button>)}</nav></div>
+    </header>
+    <main className="mx-auto max-w-[1100px] px-5 py-7">
+      <div className={tab==="wire"?"":"hidden"}><WirePanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+      <div className={tab==="token"?"":"hidden"}><TokenPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+      <div className={tab==="codespec"?"":"hidden"}><CodeSpecPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+      <div className={tab==="changelog"?"":"hidden"}><ChangelogPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
+    </main>
+    {showSettings&&<SettingsModal settings={settings} onSave={(s)=>{setSettings({...s,backendChosen:true});setShowSettings(false);toastFn("ok","설정 저장됨");}} onClose={()=>setShowSettings(false)}/>}
+    <ManualModal req={manualBridge.current()} queueCount={manualBridge.count()} onSubmit={(t)=>manualBridge.resolveCurrent(t)} onCancel={()=>manualBridge.rejectCurrent()}/>
+    <ProgressOverlay state={webllmLoader} title="브라우저 내장 AI 준비 중" emoji="🌐"/>
+    <WorkspaceFab toast={toastFn}/>
+    <Toast toast={toast}/>
+  </div>;
+}
+window.addEventListener("error",(e)=>{const root=document.getElementById("root");if(root&&(!root.firstElementChild||root.dataset.errored)){if(root.dataset.errored)return;root.dataset.errored="1";root.innerHTML='<div style="padding:24px;font-family:Pretendard,system-ui,sans-serif;color:#b91c1c"><h2 style="font-weight:700;margin-bottom:8px">초기화 오류</h2><pre style="white-space:pre-wrap;color:#54576a">'+(e.message||e.error||"알 수 없는 오류")+'</pre></div>';}});
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

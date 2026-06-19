@@ -1,0 +1,13 @@
+{
+  "name": "uxax-studio",
+  "private": true,
+  "version": "1.0.0",
+  "description": "UX×AX 자동화 도구 모음 — 스모크 테스트 설정",
+  "scripts": {
+    "test": "node smoke-test.mjs",
+    "test:install": "npm install && npx playwright install chromium"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}
