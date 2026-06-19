@@ -135,44 +135,15 @@ function dot(a,b){let s=0;const n=Math.min(a.length,b.length);for(let i=0;i<n;i+
 /* ============================================================
    프롬프트
    ============================================================ */
-const SYS_RESEARCH="당신은 20년 경력의 시니어 UX 리서처/정성데이터 분석가입니다. 근거에 기반해 한국어로 구체적이고 실무적으로 응답합니다. 인용은 원문을 유지하고, 통계를 지어내지 않습니다.";
-function buildSummaryPrompt(segs,ctx){const trans=segs.map(s=>`[${fmtTime(s.start)}] ${s.speaker?s.speaker+": ":""}${s.text}`).join("\n");return `아래 타임스탬프 인터뷰 전사록을 분석해 JSON으로만 응답하세요(설명·코드펜스 없이).${ctx?"\n[리서치 맥락] "+ctx:""}
-{ "themes":[{"tag":"주제","points":["핵심 발언 요약"]}], "summary":"3~4문장 요약", "quotes":[{"text":"원문 인용","timestamp":"mm:ss","speaker":"화자"}], "followups":["후속 질문"] }
-규칙: themes 3~6개, quotes 3~6개(전사록에 실제 있는 표현만), 모두 한국어.
-
-[전사록]
-${trans}`;}
-function buildCodebookPrompt(samples,hint){return `아래 설문 개방형 응답에서 반복 주제를 6~12개 코드로 정의(코드북)하세요.${hint?"\n참고 기준: "+hint:""}
-JSON만: { "codebook":[{"code":"코드명","desc":"정의 한 줄"}] }
-
-[응답 샘플]
-${samples.map((s,i)=>`${i+1}. ${s}`).join("\n")}`;}
-function buildCodingPrompt(cb,chunk){return `아래 코드북으로 각 응답을 코딩(코드 1개+ , 감성 pos/neu/neg)하세요. 코드는 코드북 code만 사용.
-[코드북]
-${cb.map(c=>`- ${c.code}: ${c.desc||""}`).join("\n")}
-JSON만(입력 id 유지): { "coded":[{"id":"id","codes":["코드"],"sentiment":"pos|neu|neg"}] }
-
-[응답]
-${chunk.map(r=>`(${r.id}) ${r.text}`).join("\n")}`;}
-function buildLabelPrompt(members){return `아래 의미적으로 묶인 리뷰 묶음을 분석하세요.
-JSON만: { "topic":"핵심 주제(짧게)", "sentiment":"긍정|중립|부정", "summary":"한 줄 요약", "quotes":["대표 인용1","대표 인용2"] }
-
-[리뷰 묶음]
-${members.map((m,i)=>`${i+1}. ${m}`).join("\n")}`;}
-function buildPriorityPrompt(cl){return `아래 VOC 군집 요약으로 개선 우선순위 Top 5를 근거와 함께.
-JSON만: { "priorities":[{"title":"개선 항목","why":"근거(군집/빈도)","impact":"상|중|하"}] }
-
-[군집 요약]
-${cl.map(c=>`- [${c.size}건/${c.sentiment}] ${c.topic}: ${c.summary}`).join("\n")}`;}
-function buildDeskPrompt(question,contexts){return `아래 [자료]만 근거로 "${question}"에 답하는 리서치 브리프를 작성하세요. 각 주장에는 반드시 출처 [S번호]를 답니다. 자료에 없는 내용은 지어내지 말고 gaps에 적으세요.
-JSON만: { "findings":[{"claim":"발견(주장)","source":"[S1] 문서명"}], "comparison":"자료 간 일치/상충 비교", "gaps":["추가 조사 필요 항목"] }
-
-[자료]
-${contexts}`;}
-function buildGuidePrompt(goal,participant,hyp,dur){return `"${goal}"을 위한 1:1 사용자 인터뷰 가이드를 작성하세요. 대상: ${participant||"(미정)"}.${hyp?" 가설: "+hyp:""}
-유도/이중 질문을 피하고 개방형으로. JSON만:
-{ "sections":[{"name":"섹션명","questions":[{"q":"질문","probes":["후속 질문"]}]}], "time_plan":"${dur}분 기준 섹션별 시간 배분", "bias_notes":["주의할 유도질문/편향 코멘트"] }
-섹션은 도입(라포)→핵심→마무리 구조, 핵심 질문 8~10개. 모두 한국어.`;}
+// ★ 프롬프트 본문은 common.js의 UXAX.PROMPTS로 중앙화(7파일 드리프트 방지). 여기선 데이터 정형만 하고 위임.
+const SYS_RESEARCH=UXAX.PROMPTS.SYS_RESEARCH;
+function buildSummaryPrompt(segs,ctx){const trans=segs.map(s=>`[${fmtTime(s.start)}] ${s.speaker?s.speaker+": ":""}${s.text}`).join("\n");return UXAX.PROMPTS.interviewSummary(trans,ctx);}
+function buildCodebookPrompt(samples,hint){return UXAX.PROMPTS.surveyCodebook(samples.map((s,i)=>`${i+1}. ${s}`).join("\n"),hint);}
+function buildCodingPrompt(cb,chunk){return UXAX.PROMPTS.surveyCoding(cb.map(c=>`- ${c.code}: ${c.desc||""}`).join("\n"),chunk.map(r=>`(${r.id}) ${r.text}`).join("\n"));}
+function buildLabelPrompt(members){return UXAX.PROMPTS.vocLabel(members.map((m,i)=>`${i+1}. ${m}`).join("\n"));}
+function buildPriorityPrompt(cl){return UXAX.PROMPTS.vocPriority(cl.map(c=>`- [${c.size}건/${c.sentiment}] ${c.topic}: ${c.summary}`).join("\n"));}
+function buildDeskPrompt(question,contexts){return UXAX.PROMPTS.deskBrief(question,contexts);}
+function buildGuidePrompt(goal,participant,hyp,dur){return UXAX.PROMPTS.guide(goal,participant,hyp,dur);}
 
 /* ============================================================
    UI primitives

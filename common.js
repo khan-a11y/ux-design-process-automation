@@ -65,18 +65,27 @@
   function getBrief() { var p = loadProject(); return p.brief || {}; }
 
   // payload: {data, md, meta, status}
+  // 근거 추적 메타 기본값(심층리뷰 반영): source_id / source_type / confidence / human_confirmed / used_in_phase
+  function _defMeta() { return { source_id: null, source_type: null, confidence: null, human_confirmed: false, used_in_phase: [] }; }
   function setSlot(id, payload) {
     var p = loadProject();
     var prev = p.slots[id] || {};
+    var typeFromId = (String(id).split(".")[1]) || null; // 예: "P1.survey" → "survey"
     var slot = {
       status: (payload && payload.status) || "done",
       data: payload && "data" in payload ? payload.data : prev.data,
       md: payload && "md" in payload ? payload.md : prev.md,
-      meta: Object.assign({}, prev.meta, payload && payload.meta, { at: _now() })
+      meta: Object.assign(_defMeta(), { source_type: typeFromId }, prev.meta, payload && payload.meta, { at: _now() })
     };
     p.slots[id] = slot;
     saveProject(p);
     return slot;
+  }
+  // 사람이 결과를 검수·확정했음을 표시(AI가 제안, 사람이 결정 — 근거 추적)
+  function confirmSlot(id, on) {
+    var p = loadProject(); var s = p.slots[id]; if (!s) return null;
+    s.meta = Object.assign(_defMeta(), s.meta, { human_confirmed: on !== false, at: _now() });
+    p.slots[id] = s; saveProject(p); return s;
   }
   function getSlot(id) { var p = loadProject(); return p.slots[id] || null; }
   function listSlots() { var p = loadProject(); return p.slots || {}; }
@@ -111,6 +120,65 @@
     return { note: "브라우저 내 처리" };
   }
 
+  /* ---------- 프롬프트 중앙 저장소(드리프트 방지) ----------
+     7파일에 복제되던 LLM 프롬프트 '본문'을 한곳에 모음. 각 앱은 데이터 정형만 하고
+     UXAX.PROMPTS.* 를 호출. (현재는 P1 프롬프트. P2~P7은 확산 라운드에서 추가.)
+     ※ 함수는 정형된 문자열을 받음 → 도메인 의존(fmtTime 등)은 호출부(앱)에 남김. */
+  NS.PROMPTS = {
+    SYS_RESEARCH: "당신은 20년 경력의 시니어 UX 리서처/정성데이터 분석가입니다. 근거에 기반해 한국어로 구체적이고 실무적으로 응답합니다. 인용은 원문을 유지하고, 통계를 지어내지 않습니다.",
+    interviewSummary: function (trans, ctx) {
+      return `아래 타임스탬프 인터뷰 전사록을 분석해 JSON으로만 응답하세요(설명·코드펜스 없이).${ctx ? "\n[리서치 맥락] " + ctx : ""}
+{ "themes":[{"tag":"주제","points":["핵심 발언 요약"]}], "summary":"3~4문장 요약", "quotes":[{"text":"원문 인용","timestamp":"mm:ss","speaker":"화자"}], "followups":["후속 질문"] }
+규칙: themes 3~6개, quotes 3~6개(전사록에 실제 있는 표현만), 모두 한국어.
+
+[전사록]
+${trans}`;
+    },
+    surveyCodebook: function (samplesText, hint) {
+      return `아래 설문 개방형 응답에서 반복 주제를 6~12개 코드로 정의(코드북)하세요.${hint ? "\n참고 기준: " + hint : ""}
+JSON만: { "codebook":[{"code":"코드명","desc":"정의 한 줄"}] }
+
+[응답 샘플]
+${samplesText}`;
+    },
+    surveyCoding: function (codebookText, respText) {
+      return `아래 코드북으로 각 응답을 코딩(코드 1개+ , 감성 pos/neu/neg)하세요. 코드는 코드북 code만 사용.
+[코드북]
+${codebookText}
+JSON만(입력 id 유지): { "coded":[{"id":"id","codes":["코드"],"sentiment":"pos|neu|neg"}] }
+
+[응답]
+${respText}`;
+    },
+    vocLabel: function (membersText) {
+      return `아래 의미적으로 묶인 리뷰 묶음을 분석하세요.
+JSON만: { "topic":"핵심 주제(짧게)", "sentiment":"긍정|중립|부정", "summary":"한 줄 요약", "quotes":["대표 인용1","대표 인용2"] }
+
+[리뷰 묶음]
+${membersText}`;
+    },
+    vocPriority: function (clusterText) {
+      return `아래 VOC 군집 요약으로 개선 우선순위 Top 5를 근거와 함께.
+JSON만: { "priorities":[{"title":"개선 항목","why":"근거(군집/빈도)","impact":"상|중|하"}] }
+
+[군집 요약]
+${clusterText}`;
+    },
+    deskBrief: function (question, contexts) {
+      return `아래 [자료]만 근거로 "${question}"에 답하는 리서치 브리프를 작성하세요. 각 주장에는 반드시 출처 [S번호]를 답니다. 자료에 없는 내용은 지어내지 말고 gaps에 적으세요.
+JSON만: { "findings":[{"claim":"발견(주장)","source":"[S1] 문서명"}], "comparison":"자료 간 일치/상충 비교", "gaps":["추가 조사 필요 항목"] }
+
+[자료]
+${contexts}`;
+    },
+    guide: function (goal, participant, hyp, dur) {
+      return `"${goal}"을 위한 1:1 사용자 인터뷰 가이드를 작성하세요. 대상: ${participant || "(미정)"}.${hyp ? " 가설: " + hyp : ""}
+유도/이중 질문을 피하고 개방형으로. JSON만:
+{ "sections":[{"name":"섹션명","questions":[{"q":"질문","probes":["후속 질문"]}]}], "time_plan":"${dur}분 기준 섹션별 시간 배분", "bias_notes":["주의할 유도질문/편향 코멘트"] }
+섹션은 도입(라포)→핵심→마무리 구조, 핵심 질문 8~10개. 모두 한국어.`;
+    }
+  };
+
   /* ---------- 노출 ---------- */
   NS.PROJECT_KEY = PROJECT_KEY;
   NS.loadProject = loadProject;
@@ -119,6 +187,7 @@
   NS.setBrief = setBrief;
   NS.getBrief = getBrief;
   NS.setSlot = setSlot;
+  NS.confirmSlot = confirmSlot;
   NS.getSlot = getSlot;
   NS.listSlots = listSlots;
   NS.mentorAdd = mentorAdd;
