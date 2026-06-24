@@ -33,6 +33,7 @@
 </div>
 <script>window.UXAX_CONFIG=window.UXAX_CONFIG||{};</script>
 <script src="config.js" onerror="void 0"></script>
+<script src="common.js"></script>
 <script type="text/babel" data-presets="uxax-react">
 const { useState, useEffect, useRef, useCallback } = React;
 const SETTINGS_KEY="uxax_studio_settings_v1";
@@ -103,8 +104,19 @@ function Chip({children,className}){return <span className={cx("inline-flex item
 function Toast({toast}){if(!toast)return null;const m={info:"bg-ink",error:"bg-rose-600",ok:"bg-brand-hover"};return <div className="fixed bottom-7 left-1/2 z-[70] -translate-x-1/2"><div className={cx("rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-pop fade-in",m[toast.type]||m.info)}>{toast.msg}</div></div>;}
 function WsSave({title,getText,toast}){const[d,setD]=useState(false);return <Btn size="sm" variant="soft" onClick={()=>{const t=getText&&getText();if(!t||!String(t).trim()){toast&&toast("error","저장할 결과가 없어요");return;}wsAdd(title,t);setD(true);toast&&toast("ok","보관함에 저장됨 — 다른 도구·앱에서 가져올 수 있어요");setTimeout(()=>setD(false),1600);}}>{d?"✓ 저장됨":"📤 보관함"}</Btn>;}
 function WsPull({onPick,label}){const arr=wsLoad();if(!arr.length)return null;return <select className={cx(inputVisual,"mb-2 w-full py-1.5 text-[13px]")} defaultValue="" onChange={e=>{const a=arr.find(x=>x.id===e.target.value);if(a&&onPick)onPick(a.text);e.target.value="";}}><option value="">{label||"📥 보관함에서 가져오기…"}</option>{arr.map(a=><option key={a.id} value={a.id}>{a.title} · {a.at}</option>)}</select>;}
-function WorkspaceModal({onClose,toast}){const[,f]=useState(0);const[edit,setEdit]=useState(null);const[draft,setDraft]=useState("");const arr=wsLoad();return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={onClose}><Card className="max-h-[88vh] w-full max-w-2xl overflow-y-auto p-6 shadow-pop fade-in"><div onClick={e=>e.stopPropagation()}><div className="mb-4 flex items-center justify-between"><div><h3 className="text-lg font-bold text-ink">📋 보관함</h3><p className="text-[13px] text-slate-400">도구·앱이 공유합니다. 결과를 <b>📤 보관함</b>으로 저장하고, 여기서 <b>편집·확정</b>한 뒤 입력칸 위 <b>📥 가져오기</b>로 다음 단계에 넘기세요.</p></div><button className="text-slate-400 hover:text-ink" onClick={onClose}>✕</button></div>{!arr.length?<p className="rounded-xl bg-slate-50 p-4 text-[14px] text-slate-500">아직 저장된 산출물이 없어요. 결과 카드의 <b>📤 보관함</b> 버튼으로 저장하세요.</p>:<div className="space-y-2">{arr.map(a=><Card key={a.id} className="p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="truncate font-semibold text-ink">{a.title}</div><div className="text-[12px] text-slate-400">{a.at}</div></div><div className="flex shrink-0 gap-1">{edit===a.id?<Btn size="sm" onClick={()=>{wsUpdate(a.id,draft);setEdit(null);toast&&toast("ok","수정 저장됨");}}>저장</Btn>:<Btn size="sm" variant="outline" onClick={()=>{setEdit(a.id);setDraft(a.text);}}>편집</Btn>}<Btn size="sm" variant="outline" onClick={()=>{copyText(a.text);toast&&toast("ok","복사됨");}}>복사</Btn><Btn size="sm" variant="danger" onClick={()=>{wsDel(a.id);if(edit===a.id)setEdit(null);f(n=>n+1);}}>삭제</Btn></div></div>{edit===a.id?<textarea value={draft} onChange={e=>setDraft(e.target.value)} rows={8} className={cx(inputCls,"mt-2 resize-y text-[12px]")}/>:<pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[12px] text-slate-600">{String(a.text).slice(0,600)}</pre>}</Card>)}</div>}{!!arr.length&&<div className="mt-4 flex justify-end gap-2"><Btn size="sm" variant="outline" onClick={()=>download("uxax-workspace.json",JSON.stringify(arr,null,2),"application/json")}>↧ 전체 JSON</Btn><Btn size="sm" variant="ghost" onClick={()=>{if(confirm("보관함 전체를 비울까요?")){wsClear();f(n=>n+1);}}}>전체 비우기</Btn></div>}</div></Card></div>;}
-function WorkspaceFab({toast}){const[open,setOpen]=useState(false);const[,f]=useState(0);useEffect(()=>{const fn=()=>f(n=>n+1);wsBus.notify=fn;return()=>{if(wsBus.notify===fn)wsBus.notify=null;};},[]);const n=wsLoad().length;return <React.Fragment><button onClick={()=>setOpen(true)} className="no-print fixed bottom-5 right-5 z-[60] flex items-center gap-1.5 rounded-full bg-brand px-4 py-2.5 text-[13px] font-bold text-white shadow-pop hover:bg-brand-hover" title="보관함 (도구·앱 공유)">📋 보관함{n?(" "+n):""}</button>{open&&<WorkspaceModal onClose={()=>setOpen(false)} toast={toast}/>}</React.Fragment>;}
+function SlotStatusBadge({slot}){if(!slot)return <Chip className="bg-slate-100 text-slate-400 ring-slate-200/60">미작성</Chip>;const ok=slot.meta&&slot.meta.human_confirmed;return ok?<Chip className="bg-emerald-50 text-emerald-600 ring-emerald-100">✓ 검수 완료</Chip>:<Chip className="bg-amber-50 text-amber-600 ring-amber-100">검수 전</Chip>;}
+function WorkspaceModal({onClose,toast}){const[,f]=useState(0);const[edit,setEdit]=useState(null);const[draft,setDraft]=useState("");const[view,setView]=useState("slots");const reg=(window.UXAX&&UXAX.SLOT_REGISTRY)||{};const slots=(window.UXAX&&UXAX.listSlots&&UXAX.listSlots())||{};const order=Object.keys(reg);const filledN=order.filter(id=>slots[id]).length;const memos=wsLoad();const saveSlotMd=(id)=>{if(window.UXAX&&UXAX.setSlot)UXAX.setSlot(id,{md:draft});setEdit(null);f(n=>n+1);toast&&toast("ok","수정 저장됨");};const toggleConfirm=(id,on)=>{if(window.UXAX&&UXAX.confirmSlot)UXAX.confirmSlot(id,on);f(n=>n+1);};
+  return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={onClose}><Card className="max-h-[88vh] w-full max-w-2xl overflow-y-auto p-6 shadow-pop fade-in"><div onClick={e=>e.stopPropagation()}>
+    <div className="mb-4 flex items-center justify-between"><div><h3 className="text-lg font-bold text-ink">📋 프로젝트 보관함</h3><p className="text-[13px] text-slate-400">이 프로젝트의 산출물이 <b>단계별 템플릿</b>으로 채워집니다. 어디서 만들어 어디에 쓰는지·사람이 검수했는지 한눈에 보세요.</p></div><button className="text-slate-400 hover:text-ink" onClick={onClose}>✕</button></div>
+    <div className="mb-4 flex gap-1 rounded-xl bg-slate-100 p-1 text-[13px] font-semibold"><button onClick={()=>setView("slots")} className={cx("flex-1 rounded-lg px-3 py-1.5 transition",view==="slots"?"bg-white text-brand-hover shadow-sm":"text-slate-500")}>단계별 산출물 {filledN}/{order.length}</button><button onClick={()=>setView("memos")} className={cx("flex-1 rounded-lg px-3 py-1.5 transition",view==="memos"?"bg-white text-brand-hover shadow-sm":"text-slate-500")}>기타 메모{memos.length?(" · "+memos.length):""}</button></div>
+    {view==="slots"?<div className="space-y-2.5">{order.map(id=>{const r=reg[id];const s=slots[id];const open=edit===id;return <Card key={id} className={cx("p-3.5",s?"":"border-dashed bg-slate-50/60")}>
+      <div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex items-center gap-2"><Chip className="bg-brand-light text-brand-hover ring-brand/20">{r.phase}</Chip><span className="font-semibold text-ink">{r.task}</span></div><div className="mt-1 text-[12px] text-slate-400">{r.phaseName} 단계에서 만듦 · 다음 활용 → <b className="text-slate-500">{r.nextLabel}</b></div></div><SlotStatusBadge slot={s}/></div>
+      {s?<React.Fragment><div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-slate-400">{s.meta&&s.meta.model&&<span>🤖 {s.meta.model}</span>}{s.meta&&s.meta.items!=null&&<span>· {s.meta.items}건</span>}{s.meta&&s.meta.at&&<span>· {s.meta.at}</span>}</div>{open?<textarea value={draft} onChange={e=>setDraft(e.target.value)} rows={8} className={cx(inputCls,"mt-2 resize-y text-[12px]")}/>:<pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[12px] text-slate-600">{String(s.md||"(요약 텍스트 없음 — 구조화 데이터만 저장됨)").slice(0,800)}</pre>}<div className="mt-2 flex flex-wrap gap-1">{open?<Btn size="sm" onClick={()=>saveSlotMd(id)}>저장</Btn>:<Btn size="sm" variant="outline" onClick={()=>{setEdit(id);setDraft(String(s.md||""));}}>편집</Btn>}<Btn size="sm" variant="outline" onClick={()=>{copyText(String(s.md||""));toast&&toast("ok","복사됨");}}>복사</Btn>{s.meta&&s.meta.human_confirmed?<Btn size="sm" variant="ghost" onClick={()=>toggleConfirm(id,false)}>✓ 검수 해제</Btn>:<Btn size="sm" variant="soft" onClick={()=>toggleConfirm(id,true)}>내가 검수함</Btn>}</div></React.Fragment>:<div className="mt-1.5 text-[12.5px] text-slate-400">아직 비어 있어요 — <b className="text-slate-500">{r.phase==="P0"?"홈 화면 P0 폼":"위 탭"}</b>에서 만들면 여기 자동으로 담겨요.</div>}
+    </Card>;})}</div>:(!memos.length?<p className="rounded-xl bg-slate-50 p-4 text-[14px] text-slate-500">자유 메모가 없어요. 결과 카드의 <b>📤 보관함</b> 버튼으로 저장하면 여기에 모여요.</p>:<div className="space-y-2">{memos.map(a=><Card key={a.id} className="p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="truncate font-semibold text-ink">{a.title}</div><div className="text-[12px] text-slate-400">{a.at}</div></div><div className="flex shrink-0 gap-1">{edit===a.id?<Btn size="sm" onClick={()=>{wsUpdate(a.id,draft);setEdit(null);toast&&toast("ok","수정 저장됨");}}>저장</Btn>:<Btn size="sm" variant="outline" onClick={()=>{setEdit(a.id);setDraft(a.text);}}>편집</Btn>}<Btn size="sm" variant="outline" onClick={()=>{copyText(a.text);toast&&toast("ok","복사됨");}}>복사</Btn><Btn size="sm" variant="danger" onClick={()=>{wsDel(a.id);if(edit===a.id)setEdit(null);f(n=>n+1);}}>삭제</Btn></div></div>{edit===a.id?<textarea value={draft} onChange={e=>setDraft(e.target.value)} rows={8} className={cx(inputCls,"mt-2 resize-y text-[12px]")}/>:<pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[12px] text-slate-600">{String(a.text).slice(0,600)}</pre>}</Card>)}</div>)}
+    {view==="memos"&&!!memos.length&&<div className="mt-4 flex justify-end gap-2"><Btn size="sm" variant="outline" onClick={()=>download("uxax-workspace.json",JSON.stringify(memos,null,2),"application/json")}>↧ 메모 JSON</Btn><Btn size="sm" variant="ghost" onClick={()=>{if(confirm("기타 메모를 전부 비울까요?")){wsClear();f(n=>n+1);}}}>메모 비우기</Btn></div>}
+    {view==="slots"&&<div className="mt-4 flex justify-end"><Btn size="sm" variant="outline" onClick={()=>{const p=window.UXAX&&UXAX.loadProject&&UXAX.loadProject();download("uxax-project.json",JSON.stringify(p||{},null,2),"application/json");}}>↧ 프로젝트 전체 JSON</Btn></div>}
+  </div></Card></div>;}
+function WorkspaceFab({toast}){const[open,setOpen]=useState(false);const[,f]=useState(0);useEffect(()=>{const fn=()=>f(n=>n+1);wsBus.notify=fn;return()=>{if(wsBus.notify===fn)wsBus.notify=null;};},[]);const _slots=(window.UXAX&&UXAX.listSlots&&UXAX.listSlots())||{};const _filled=Object.keys((window.UXAX&&UXAX.SLOT_REGISTRY)||{}).filter(id=>_slots[id]).length;const n=_filled+wsLoad().length;return <React.Fragment><button onClick={()=>setOpen(true)} className="no-print fixed bottom-5 right-5 z-[60] flex items-center gap-1.5 rounded-full bg-brand px-4 py-2.5 text-[13px] font-bold text-white shadow-pop hover:bg-brand-hover" title="프로젝트 보관함 (단계별 산출물 + 메모)">📋 보관함{n?(" "+n):""}</button>{open&&<WorkspaceModal onClose={()=>setOpen(false)} toast={toast}/>}</React.Fragment>;}
 function StepHead({n,title,sub,done}){return <div className="mb-3 flex items-center gap-3"><div className={cx("flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold",done?"bg-emerald-500 text-white":"bg-brand text-white")}>{done?"✓":n}</div><div><div className="text-[17px] font-bold text-ink">{title}</div>{sub&&<div className="text-[13px] text-slate-400">{sub}</div>}</div></div>;}
 /* ===== 학습 레이어 (전체 프로세스 내비 + 초급자 ?도움말 + 예제) ===== */
 const PROCESS=[
@@ -146,6 +158,9 @@ function WritingPanel({settings,openSettings,toast}){
   useEffect(()=>{save(K,{screen,tone,glossary,res})},[screen,tone,glossary,res]);
   const run=async()=>{if(!screen.trim()){toast("error","화면/맥락을 입력하세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setRes(null);try{const out=await runLLM(settings,{system:SYS,messages:[{role:"user",content:buildWritingPrompt(screen,tone,glossary)}],maxTokens:2200,stream:false,meta:{who:"UX 라이팅"}});const p=parseJsonLoose(out);setRes((p&&p.copy)||(p&&typeof p==="object"?{raw:out}:null)||{raw:out});if(p&&p.copy)setRes(p.copy);toast("ok","라이팅 완료");}catch(e){toast("error","실패: "+(e.message||e));}finally{setBusy(false);}};
   const rows=Array.isArray(res)?res:null;
+  const writingMd=()=>rows?("# UX 라이팅 카피\n"+rows.map(r=>"- ["+S(r.element)+"] "+S(r.text)+(r.alt?(" / 변형: "+S(r.alt)):"")).join("\n")):"";
+  const[confirmed,setConfirmed]=useState(()=>{const s=(window.UXAX&&UXAX.getSlot&&UXAX.getSlot("P4.writing"));return !!(s&&s.meta&&s.meta.human_confirmed);});
+  const saveSlot=()=>{if(window.UXAX&&UXAX.setSlot&&rows)UXAX.setSlot("P4.writing",{data:{rows},md:writingMd(),meta:{model:backendLabel(settings),items:rows.length}});};
   const exportCsv=()=>{if(!rows)return;download("ux_copy.csv",toCSV([["요소","기본","변형","길이","코멘트"],...rows.map(r=>[r.element,r.text,r.alt,(S(r.text)).length,r.note])]),"text/csv;charset=utf-8");};
   return <div className="space-y-6">
     <Guide defaultOpen={!res}
@@ -171,12 +186,12 @@ function WritingPanel({settings,openSettings,toast}){
       <div className="space-y-4"><Field label="화면 / 맥락"><input className={inputCls} value={screen} onChange={e=>setScreen(e.target.value)} placeholder="예: 안전결제 안내 모달"/></Field><div className="grid gap-3 sm:grid-cols-2"><Field label="톤앤보이스"><input className={inputCls} value={tone} onChange={e=>setTone(e.target.value)} placeholder="예: 신뢰감 있고 간결하게"/></Field><Field label="용어/금지어 (선택)"><input className={inputCls} value={glossary} onChange={e=>setGlossary(e.target.value)} placeholder="예: '에스크로' 대신 '안전결제'"/></Field></div></div>
       <div className="mt-4"><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 카피 생성 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn></div>
     </Card>
-    {res&&<Card className="p-6 fade-in"><div className="mb-4 flex items-center justify-between"><StepHead n={2} title="카피 세트" done={true}/>{rows&&<div className="flex gap-2"><WsSave title="UX 라이팅 카피" getText={()=>rows?("# UX 라이팅 카피\n"+rows.map(r=>"- ["+S(r.element)+"] "+S(r.text)+(r.alt?(" / 변형: "+S(r.alt)):"")).join("\n")):""} toast={toast}/><Btn size="sm" variant="outline" onClick={exportCsv}>↧ CSV</Btn></div>}</div>
+    {res&&<Card className="p-6 fade-in"><div className="mb-4 flex items-center justify-between"><StepHead n={2} title="카피 세트" done={true}/>{rows&&<div className="flex flex-wrap gap-2"><WsSave title="UX 라이팅 카피" getText={writingMd} toast={toast}/><Btn size="sm" variant="outline" onClick={exportCsv}>↧ CSV</Btn><Btn size="sm" variant={confirmed?"primary":"outline"} onClick={()=>{const nv=!confirmed;saveSlot();if(window.UXAX&&UXAX.confirmSlot)UXAX.confirmSlot("P4.writing",nv);setConfirmed(nv);toast("ok",nv?"검수 완료로 표시 — 다음 단계에서 ‘사람 확인됨’으로 보여요":"검수 표시를 해제했어요");}}>{confirmed?"✓ 검수 완료":"☐ 내가 검수함"}</Btn></div>}</div>
       {rows?<div className="overflow-x-auto"><table className="w-full text-[14px]"><thead className="bg-slate-50"><tr><th className="p-2 text-left">요소</th><th className="p-2 text-left">기본</th><th className="p-2 text-left">변형</th><th className="p-2">길이</th><th className="p-2 text-left">코멘트</th></tr></thead><tbody>{rows.map((r,i)=>{const len=S(r.text).length;return <tr key={i} className="border-t border-hair align-top"><td className="p-2 font-semibold text-ink">{S(r.element)}</td><td className="p-2 text-ink">{S(r.text)}</td><td className="p-2 text-slate-500">{S(r.alt)}</td><td className="p-2 text-center"><span className={cx("text-[12px]",len>20?"font-bold text-amber-600":"text-slate-400")}>{len}</span></td><td className="p-2 text-[13px] text-slate-500">{S(r.note)}</td></tr>;})}</tbody></table></div>:<pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre>}
     </Card>}
     {rows&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
       <span className="text-[14px] font-bold text-ink">✅ 카피 완성! 다음 단계 →</span>
-      <Btn size="sm" onClick={()=>{wsAdd("UX 라이팅 카피","# UX 라이팅 카피\n"+rows.map(r=>"- ["+S(r.element)+"] "+S(r.text)+(r.alt?(" / 변형: "+S(r.alt)):"")).join("\n"));toast("ok","보관함 저장 — ② 현지화 탭에서 📥 가져오기로 이어가세요");location.hash="localize";}}>📤 저장하고 ② 현지화로 →</Btn>
+      <Btn size="sm" onClick={()=>{saveSlot();wsAdd("UX 라이팅 카피","# UX 라이팅 카피\n"+rows.map(r=>"- ["+S(r.element)+"] "+S(r.text)+(r.alt?(" / 변형: "+S(r.alt)):"")).join("\n"));toast("ok","보관함 저장 — ② 현지화 탭에서 📥 가져오기로 이어가세요");location.hash="localize";}}>📤 저장하고 ② 현지화로 →</Btn>
       <HelpCue title="라이팅 다음은?" faqs={[{q:"카피 다음은요?",a:"확정한 카피를 ② 다국어 현지화로 보내 여러 언어로 번역·검증해요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
     </div>}
   </div>;
@@ -195,6 +210,9 @@ function LocalizePanel({settings,openSettings,toast}){
       const phK=(ko.match(/\{[^}]+\}/g)||[]);const phV=(String(v).match(/\{[^}]+\}/g)||[]);if(phK.length!==phV.length)warnings.push(`${t.key} (${l}): 변수 {placeholder} 누락/불일치`);});});
     setRes({translations:trans,langList,warnings});toast("ok","현지화 완료");}catch(e){toast("error","실패: "+(e.message||e));}finally{setBusy(false);}};
   const exportJson=()=>{if(!res||!res.translations)return;const obj={};res.langList.forEach(l=>obj[l]={});res.translations.forEach(t=>res.langList.forEach(l=>{obj[l][t.key]=(t.langs||{})[l]||"";}));download("i18n.json",JSON.stringify(obj,null,2),"application/json");};
+  const localizeMd=()=>res&&res.translations?("# 다국어 현지화\n"+res.translations.map(t=>S(t.key)+": "+Object.entries(t.langs||{}).map(([l,v])=>l+"="+S(v)).join(" | ")).join("\n")):"";
+  const[confirmed,setConfirmed]=useState(()=>{const s=(window.UXAX&&UXAX.getSlot&&UXAX.getSlot("P4.localize"));return !!(s&&s.meta&&s.meta.human_confirmed);});
+  const saveSlot=()=>{if(window.UXAX&&UXAX.setSlot&&res&&res.translations)UXAX.setSlot("P4.localize",{data:{translations:res.translations},md:localizeMd(),meta:{model:backendLabel(settings),items:res.translations.length}});};
   return <div className="space-y-6">
     <Guide defaultOpen={!res}
       what="기준(한국어) UI 카피를 여러 언어로 번역·현지화하고, 원문 대비 길이가 130%를 넘으면(UI 잘림 위험) 자동 경고하며 {placeholder} 변수 누락도 잡아 주는 도구입니다. i18n JSON으로 내보냅니다."
@@ -220,13 +238,13 @@ function LocalizePanel({settings,openSettings,toast}){
       <Field label="대상 언어"><input className={cx(inputCls,"mt-3")} value={langs} onChange={e=>setLangs(e.target.value)} placeholder="en, ja, zh"/></Field>
       <div className="mt-4"><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 현지화 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn></div>
     </Card>
-    {res&&<Card className="p-6 fade-in"><div className="mb-4 flex items-center justify-between"><StepHead n={2} title="번역 결과" done={true}/>{res.translations&&<div className="flex gap-2"><WsSave title="다국어 현지화" getText={()=>res&&res.translations?("# 다국어 현지화\n"+res.translations.map(t=>S(t.key)+": "+Object.entries(t.langs||{}).map(([l,v])=>l+"="+S(v)).join(" | ")).join("\n")):""} toast={toast}/><Btn size="sm" variant="outline" onClick={exportJson}>↧ i18n JSON</Btn></div>}</div>
+    {res&&<Card className="p-6 fade-in"><div className="mb-4 flex items-center justify-between"><StepHead n={2} title="번역 결과" done={true}/>{res.translations&&<div className="flex flex-wrap gap-2"><WsSave title="다국어 현지화" getText={localizeMd} toast={toast}/><Btn size="sm" variant="outline" onClick={exportJson}>↧ i18n JSON</Btn><Btn size="sm" variant={confirmed?"primary":"outline"} onClick={()=>{const nv=!confirmed;saveSlot();if(window.UXAX&&UXAX.confirmSlot)UXAX.confirmSlot("P4.localize",nv);setConfirmed(nv);toast("ok",nv?"검수 완료로 표시 — 다음 단계에서 ‘사람 확인됨’으로 보여요":"검수 표시를 해제했어요");}}>{confirmed?"✓ 검수 완료":"☐ 내가 검수함"}</Btn></div>}</div>
       {res.translations?<div><div className="overflow-x-auto"><table className="w-full text-[13px]"><thead className="bg-slate-50"><tr><th className="p-2 text-left">key</th><th className="p-2 text-left">ko</th>{res.langList.map(l=><th key={l} className="p-2 text-left">{l}</th>)}</tr></thead><tbody>{res.translations.map((t,i)=><tr key={i} className="border-t border-hair align-top"><td className="p-2"><code className="text-[12px]">{S(t.key)}</code></td><td className="p-2 text-slate-500">{parseRows().find(r=>r.key===t.key)?.ko||""}</td>{res.langList.map(l=><td key={l} className="p-2 text-ink">{S((t.langs||{})[l])}</td>)}</tr>)}</tbody></table></div>
       {!!res.warnings.length&&<div className="mt-3 rounded-xl bg-amber-50 p-3"><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-amber-700">길이·변수 경고 ({res.warnings.length})</div><ul className="ml-5 list-disc space-y-1 text-[13px] text-amber-800">{res.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul></div>}</div>:<pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre>}
     </Card>}
     {res&&res.translations&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
       <span className="text-[14px] font-bold text-ink">✅ 현지화 완성! 다음 단계 →</span>
-      <Btn size="sm" onClick={()=>{wsAdd("다국어 현지화","# 다국어 현지화\n"+res.translations.map(t=>S(t.key)+": "+Object.entries(t.langs||{}).map(([l,v])=>l+"="+S(v)).join(" | ")).join("\n"));toast("ok","보관함 저장 — P5에서 📥 가져오기로 이어가세요");location.href="./P5_디자인핸드오프스튜디오.html#codespec";}}>📤 저장하고 P5 핸드오프로 →</Btn>
+      <Btn size="sm" onClick={()=>{saveSlot();wsAdd("다국어 현지화","# 다국어 현지화\n"+res.translations.map(t=>S(t.key)+": "+Object.entries(t.langs||{}).map(([l,v])=>l+"="+S(v)).join(" | ")).join("\n"));toast("ok","보관함 저장 — P5에서 📥 가져오기로 이어가세요");location.href="./P5_디자인핸드오프스튜디오.html#codespec";}}>📤 저장하고 P5 핸드오프로 →</Btn>
       <HelpCue title="현지화 다음은?" faqs={[{q:"현지화 다음은요?",a:"i18n 결과를 P5 디자인·핸드오프(코드 스펙)로 넘겨 개발에 전달해요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
     </div>}
   </div>;
@@ -242,6 +260,9 @@ function DummyPanel({settings,openSettings,toast}){
   const cols=records&&records.length?Array.from(records.reduce((s,r)=>{Object.keys(r||{}).forEach(k=>s.add(k));return s;},new Set())):[];
   const exportJson=()=>{if(!records)return;download("dummy.json",JSON.stringify(records,null,2),"application/json");};
   const exportCsv=()=>{if(!records)return;download("dummy.csv",toCSV([cols,...records.map(r=>cols.map(c=>r[c]))]),"text/csv;charset=utf-8");};
+  const dummyMd=()=>records?("# 더미 데이터 ("+records.length+"건)\n```json\n"+JSON.stringify(records,null,2)+"\n```"):"";
+  const[confirmed,setConfirmed]=useState(()=>{const s=(window.UXAX&&UXAX.getSlot&&UXAX.getSlot("P4.dummy"));return !!(s&&s.meta&&s.meta.human_confirmed);});
+  const saveSlot=()=>{if(window.UXAX&&UXAX.setSlot&&records)UXAX.setSlot("P4.dummy",{data:{records},md:dummyMd(),meta:{model:backendLabel(settings),items:records.length}});};
   return <div className="space-y-6">
     <Guide defaultOpen={!res}
       what="데이터 구조(필드)를 넣으면 ‘로렘입숨’ 대신 한국어 맥락의 현실적인 더미 콘텐츠를 만들어 주는 도구입니다. 짧은/긴/엣지케이스 값을 섞고, 이미지가 필요한 항목엔 생성 프롬프트도 제안합니다."
@@ -265,13 +286,13 @@ function DummyPanel({settings,openSettings,toast}){
       <Field label="필드/스키마"><textarea className={cx(inputCls,"resize-y")} rows={4} value={fields} onChange={e=>setFields(e.target.value)} placeholder={"name, price(숫자), condition(상/중/하), location, postedAt(상대시간), likes(숫자)"}/></Field>
       <div className="mt-3 flex flex-wrap items-end gap-4"><Field label="건수"><input type="number" min="3" max="50" className={cx(inputVisual,"w-24")} value={count} onChange={e=>setCount(Math.max(3,Math.min(50,+e.target.value||12)))}/></Field><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 더미 생성 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn></div>
     </Card>
-    {res&&<Card className="p-6 fade-in"><div className="mb-4 flex items-center justify-between"><StepHead n={2} title="더미 데이터" sub={records?`${records.length}건`:""} done={true}/>{records&&<div className="flex gap-2"><WsSave title="더미 데이터(JSON)" getText={()=>records?JSON.stringify(records,null,2):""} toast={toast}/><Btn size="sm" variant="outline" onClick={exportJson}>↧ JSON</Btn><Btn size="sm" variant="outline" onClick={exportCsv}>↧ CSV</Btn></div>}</div>
+    {res&&<Card className="p-6 fade-in"><div className="mb-4 flex items-center justify-between"><StepHead n={2} title="더미 데이터" sub={records?`${records.length}건`:""} done={true}/>{records&&<div className="flex flex-wrap gap-2"><WsSave title="더미 데이터(JSON)" getText={()=>records?JSON.stringify(records,null,2):""} toast={toast}/><Btn size="sm" variant="outline" onClick={exportJson}>↧ JSON</Btn><Btn size="sm" variant="outline" onClick={exportCsv}>↧ CSV</Btn><Btn size="sm" variant={confirmed?"primary":"outline"} onClick={()=>{const nv=!confirmed;saveSlot();if(window.UXAX&&UXAX.confirmSlot)UXAX.confirmSlot("P4.dummy",nv);setConfirmed(nv);toast("ok",nv?"검수 완료로 표시 — 다음 단계에서 ‘사람 확인됨’으로 보여요":"검수 표시를 해제했어요");}}>{confirmed?"✓ 검수 완료":"☐ 내가 검수함"}</Btn></div>}</div>
       {records?<div><div className="overflow-x-auto"><table className="w-full text-[13px]"><thead className="bg-slate-50"><tr>{cols.map(c=><th key={c} className="p-2 text-left">{c}</th>)}</tr></thead><tbody>{records.map((r,i)=><tr key={i} className="border-t border-hair">{cols.map(c=><td key={c} className="p-2 text-slate-700">{S(r[c])}</td>)}</tr>)}</tbody></table></div>
       {!!arr(res.image_prompts).length&&<div className="mt-3"><div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-slate-400">이미지 생성 프롬프트</div><ul className="ml-5 list-disc space-y-1 text-[13px] text-slate-600">{res.image_prompts.map((p,i)=><li key={i}>{S(p)}</li>)}</ul></div>}</div>:<pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre>}
     </Card>}
     {records&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
       <span className="text-[14px] font-bold text-ink">✅ 더미 생성 완료! 다음 단계 →</span>
-      <Btn size="sm" onClick={()=>{wsAdd("더미 데이터(JSON)",JSON.stringify(records,null,2));toast("ok","보관함 저장 — P5 와이어/목업에 이 데이터를 채워 검증하세요");location.href="./P5_디자인핸드오프스튜디오.html#wire";}}>📤 저장하고 P5 와이어프레임으로 →</Btn>
+      <Btn size="sm" onClick={()=>{saveSlot();wsAdd("더미 데이터(JSON)",JSON.stringify(records,null,2));toast("ok","보관함 저장 — P5 와이어/목업에 이 데이터를 채워 검증하세요");location.href="./P5_디자인핸드오프스튜디오.html#wire";}}>📤 저장하고 P5 와이어프레임으로 →</Btn>
       <HelpCue title="더미 다음은?" faqs={[{q:"더미 데이터 다음은요?",a:"이 데이터를 P5 와이어프레임·목업에 채워 진짜 같은 화면으로 검증해요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
     </div>}
   </div>;
@@ -279,6 +300,70 @@ function DummyPanel({settings,openSettings,toast}){
 
 /* ===== Root ===== */
 const TABS=[{id:"writing",label:"① UX 라이팅",pid:"P4-A3"},{id:"localize",label:"② 다국어 현지화",pid:"P4-A5"},{id:"dummy",label:"③ 더미 콘텐츠",pid:"P4-A4"}];
+/* 판단 게이트 — "이 단계 시작·마무리해도 되나" 6칸 자가점검(초급자 판단 학습). dossier.gates[phase]에 저장 */
+function GatePanel({phase}){
+  const[open,setOpen]=useState(false);const[,force]=useState(0);
+  const g=(window.UXAX&&UXAX.getGate&&UXAX.getGate(phase))||{};
+  const auto=(window.UXAX&&UXAX.deriveGate&&UXAX.deriveGate(phase))||{};
+  const fields=(window.UXAX&&UXAX.GATE_FIELDS)||[];
+  const brief=(window.UXAX&&UXAX.getBrief&&UXAX.getBrief())||{};
+  // P0 정의 → 게이트 연결: 목표는 P0 '한 줄 정의', 합격선은 P0 '성공 기준'에서 가져올 수 있게(프리필).
+  const PREFILL={goal:{src:(brief.oneline||"").trim(),label:"P0 한 줄 정의 가져오기"},passLine:{src:(brief.success||"").trim(),label:"P0 성공 기준 가져오기"}};
+  const hasBrief=!!((brief.oneline||"").trim()||(brief.success||"").trim());
+  const val=(k)=>g[k]||"";const autoOf=(k)=>auto[k];
+  const setVal=(k,v)=>{if(window.UXAX&&UXAX.setGate)UXAX.setGate(phase,{[k]:v});force(n=>n+1);};
+  const sat=fields.filter(f=>f.kind==="auto"?(autoOf(f.key)&&autoOf(f.key).ok):!!String(val(f.key)).trim()).length;
+  const allOk=fields.length>0&&sat===fields.length;const confirmed=!!g.confirmed;
+  return <div className="mb-5 rounded-2xl border border-hair bg-white shadow-soft">
+    <button onClick={()=>setOpen(o=>!o)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
+      <span className="text-lg">🚦</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2 text-[15px] font-bold text-ink">단계 점검 · 판단 게이트<Chip className={allOk?"bg-emerald-50 text-emerald-600 ring-emerald-100":"bg-amber-50 text-amber-600 ring-amber-100"}>{allOk?"준비 완료":"점검 "+sat+"/"+fields.length}</Chip>{confirmed&&<Chip className="bg-brand-light text-brand-hover ring-brand/20">✓ 마무리 점검됨</Chip>}</div>
+        <div className="text-[12.5px] text-slate-400">이 단계를 <b>시작·마무리해도 되는지</b> 6칸으로 스스로 점검 — “무엇을 어디까지” 판단하는 법을 배워요.</div>
+      </div>
+      <span className="shrink-0 text-[13px] text-slate-400">{open?"접기 ▲":"펼치기 ▼"}</span>
+    </button>
+    {open&&<div className="border-t border-hair p-4">
+      {hasBrief
+        ? <div className="mb-3 rounded-xl border border-brand/20 bg-brand-faint p-3">
+            <div className="flex flex-wrap items-center gap-1.5 text-[12.5px] font-bold text-brand-hover">🧭 이 프로젝트의 북극성<span className="font-normal text-slate-400">— 프로젝트 정의(P0)에서 정함</span></div>
+            {(brief.oneline||"").trim()&&<div className="mt-1 text-[12.5px] leading-relaxed text-slate-600"><b className="text-ink">한 줄 정의</b> · {brief.oneline}</div>}
+            {(brief.success||"").trim()&&<div className="mt-0.5 text-[12.5px] leading-relaxed text-slate-600"><b className="text-ink">성공 기준</b> · {brief.success}</div>}
+            <div className="mt-1.5 text-[11.5px] leading-relaxed text-slate-400">리서치하며 생각이 바뀌면 <a href="./index.html" className="font-semibold text-brand-hover hover:underline">홈에서 정의를 고치세요 →</a> 정의는 고정이 아니라 같이 자라요.</div>
+          </div>
+        : <div className="mb-3 rounded-xl border border-amber-100 bg-amber-50/50 p-3 text-[12.5px] leading-relaxed text-amber-700">아직 <b>프로젝트 정의(P0)</b>가 비어 있어요 — <a href="./index.html" className="font-semibold underline">홈에서 먼저 정하면</a> 이 단계의 목표·합격선이 또렷해져요.</div>}
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        {fields.map(f=>{const a=autoOf(f.key);const pf=PREFILL[f.key];const empty=!String(val(f.key)).trim();return <div key={f.key} className={cx("rounded-xl border p-3",f.kind==="auto"?(a&&a.ok?"border-emerald-100 bg-emerald-50/40":"border-amber-100 bg-amber-50/40"):"border-hair bg-white")}>
+          <div className="flex items-center gap-1.5 text-[13px] font-bold text-ink"><span>{f.icon}</span><span>{f.label}</span>{f.kind==="auto"&&<span className={cx("ml-auto text-[12px] font-bold",a&&a.ok?"text-emerald-600":"text-amber-600")}>{a&&a.ok?"✓ 충족":"⚠ 확인"}</span>}</div>
+          <div className="mt-0.5 text-[12px] leading-relaxed text-slate-500">{f.help}</div>
+          {f.kind==="auto"?<div className={cx("mt-1.5 text-[12.5px] font-medium",a&&a.ok?"text-emerald-700":"text-amber-700")}>{a?a.why:""}</div>:<div className="mt-1.5"><textarea value={val(f.key)} onChange={e=>setVal(f.key,e.target.value)} placeholder={f.ph} rows={2} className={cx(inputCls,"resize-y text-[13px]")}/>{pf&&pf.src&&empty&&<button type="button" onClick={()=>setVal(f.key,pf.src)} className="mt-1 text-[11.5px] font-semibold text-brand-hover hover:underline">↧ {pf.label}</button>}</div>}
+        </div>;})}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-[12.5px] text-slate-500">{allOk?"6칸 모두 충족 — 자신 있게 진행하거나 다음 단계로 넘어가도 좋아요.":"빈 칸·⚠ 항목을 채우면 더 단단해져요. (강제는 아니에요 — 판단을 돕는 체크리스트)"}</div>
+        <Btn size="sm" variant={confirmed?"ghost":"soft"} onClick={()=>{if(window.UXAX&&UXAX.setGate)UXAX.setGate(phase,{confirmed:!confirmed});force(n=>n+1);}}>{confirmed?"✓ 마무리 점검 해제":"이 단계 마무리 점검 통과로 표시"}</Btn>
+      </div>
+    </div>}
+  </div>;
+}
+/* 하단 단계 네비 — 같은 단계 안 탭 이동(이전/다음) + 이전 단계 돌아가기 + 다음 단계로 진행 */
+function StageNav({tab,setTab}){
+  const i=TABS.findIndex(t=>t.id===tab);const prevTab=TABS[i-1],nextTab=TABS[i+1];
+  const pi=PROCESS.findIndex(p=>p.id===CURRENT_PHASE);const prevPhase=PROCESS[pi-1],nextPhase=PROCESS[pi+1];const curName=(PROCESS[pi]||{}).name||"";
+  return <nav className="no-print mx-auto mt-10 mb-36 max-w-[1100px] px-5">
+    <div className="rounded-2xl border border-hair bg-white p-4 shadow-soft">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <button onClick={()=>prevTab&&setTab(prevTab.id)} disabled={!prevTab} className={cx("inline-flex min-w-0 items-center gap-1.5 rounded-[10px] border border-hair px-3 py-2 text-[13px] font-semibold transition",prevTab?"text-slate-600 hover:bg-slate-50":"cursor-default opacity-40")}>← <span className="truncate">{prevTab?prevTab.label:"이 단계 처음"}</span></button>
+        <div className="shrink-0 text-center text-[12px] text-slate-400">{CURRENT_PHASE} {curName} 안에서 <b className="text-brand-hover">{i+1} / {TABS.length}</b></div>
+        <button onClick={()=>nextTab&&setTab(nextTab.id)} disabled={!nextTab} className={cx("inline-flex min-w-0 items-center gap-1.5 rounded-[10px] border border-hair px-3 py-2 text-[13px] font-semibold transition",nextTab?"text-slate-600 hover:bg-slate-50":"cursor-default opacity-40")}><span className="truncate">{nextTab?nextTab.label:"이 단계 마지막"}</span> →</button>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hair pt-3">
+        <a href={prevPhase?("./"+prevPhase.file):"./index.html"} className="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-[13px] font-semibold text-slate-500 hover:bg-slate-100">↩ {prevPhase?(prevPhase.id+" "+prevPhase.name+"로 돌아가기"):"홈 · 프로젝트 정의(P0)"}</a>
+        {nextPhase&&<a href={"./"+nextPhase.file} className="inline-flex items-center gap-2 rounded-[10px] bg-brand px-4 py-2.5 text-[13px] font-bold text-white shadow-sm hover:bg-brand-hover" title="이 단계를 마쳤다면 다음 단계로">다음 단계 → {nextPhase.id} {nextPhase.name}</a>}
+      </div>
+    </div>
+  </nav>;
+}
 function App(){
   const[settings,setSettings]=useState(()=>{const s=load(SETTINGS_KEY,null);const fc=(window.UXAX_CONFIG&&window.UXAX_CONFIG.anthropicApiKey)||"";const def={backend:fc?"api":"manual",apiKey:fc,model:MODELS[0].id,ollamaUrl:"http://127.0.0.1:11434",ollamaModel:"",webllmModel:WEBLLM_PREFERRED[0]};return s?{...def,...s}:def;});
   const[tab,setTab]=useState(()=>{const h=(location.hash||"").replace("#","");return TABS.find(t=>t.id===h)?h:"writing";});
@@ -296,10 +381,12 @@ function App(){
       <div className="mx-auto max-w-[1100px] overflow-x-auto px-3"><nav className="flex gap-1">{TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} className={cx("flex items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition",tab===t.id?"border-brand text-brand-hover":"border-transparent text-slate-500 hover:text-ink")}>{t.label}<span className="text-[11px] text-slate-400">{t.pid}</span></button>)}</nav></div>
     </header>
     <main className="mx-auto max-w-[1100px] px-5 py-7">
+      <GatePanel phase={CURRENT_PHASE}/>
       <div className={tab==="writing"?"":"hidden"}><WritingPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
       <div className={tab==="localize"?"":"hidden"}><LocalizePanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
       <div className={tab==="dummy"?"":"hidden"}><DummyPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
     </main>
+    <StageNav tab={tab} setTab={setTab}/>
     {showSettings&&<SettingsModal settings={settings} onSave={(s)=>{setSettings({...s,backendChosen:true});setShowSettings(false);toastFn("ok","설정 저장됨");}} onClose={()=>setShowSettings(false)}/>}
     <ManualModal req={manualBridge.current()} queueCount={manualBridge.count()} onSubmit={(t)=>manualBridge.resolveCurrent(t)} onCancel={()=>manualBridge.rejectCurrent()}/>
     <ProgressOverlay state={webllmLoader} title="브라우저 내장 AI 준비 중" emoji="🌐"/>

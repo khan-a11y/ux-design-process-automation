@@ -33,6 +33,7 @@
 </div>
 <script>window.UXAX_CONFIG=window.UXAX_CONFIG||{};</script>
 <script src="config.js" onerror="void 0"></script>
+<script src="common.js"></script>
 <script type="text/babel" data-presets="uxax-react">
 const { useState, useEffect, useRef, useCallback } = React;
 const SETTINGS_KEY="uxax_studio_settings_v1";
@@ -129,8 +130,19 @@ function Chip({children,className}){return <span className={cx("inline-flex item
 function Toast({toast}){if(!toast)return null;const m={info:"bg-ink",error:"bg-rose-600",ok:"bg-brand-hover"};return <div className="fixed bottom-7 left-1/2 z-[70] -translate-x-1/2"><div className={cx("rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-pop fade-in",m[toast.type]||m.info)}>{toast.msg}</div></div>;}
 function WsSave({title,getText,toast}){const[d,setD]=useState(false);return <Btn size="sm" variant="soft" onClick={()=>{const t=getText&&getText();if(!t||!String(t).trim()){toast&&toast("error","저장할 결과가 없어요");return;}wsAdd(title,t);setD(true);toast&&toast("ok","보관함에 저장됨 — 다른 도구·앱에서 가져올 수 있어요");setTimeout(()=>setD(false),1600);}}>{d?"✓ 저장됨":"📤 보관함"}</Btn>;}
 function WsPull({onPick,label}){const arr=wsLoad();if(!arr.length)return null;return <select className={cx(inputVisual,"mb-2 w-full py-1.5 text-[13px]")} defaultValue="" onChange={e=>{const a=arr.find(x=>x.id===e.target.value);if(a&&onPick)onPick(a.text);e.target.value="";}}><option value="">{label||"📥 보관함에서 가져오기…"}</option>{arr.map(a=><option key={a.id} value={a.id}>{a.title} · {a.at}</option>)}</select>;}
-function WorkspaceModal({onClose,toast}){const[,f]=useState(0);const[edit,setEdit]=useState(null);const[draft,setDraft]=useState("");const arr=wsLoad();return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={onClose}><Card className="max-h-[88vh] w-full max-w-2xl overflow-y-auto p-6 shadow-pop fade-in"><div onClick={e=>e.stopPropagation()}><div className="mb-4 flex items-center justify-between"><div><h3 className="text-lg font-bold text-ink">📋 보관함</h3><p className="text-[13px] text-slate-400">도구·앱이 공유합니다. 결과를 <b>📤 보관함</b>으로 저장하고, 여기서 <b>편집·확정</b>한 뒤 입력칸 위 <b>📥 가져오기</b>로 다음 단계에 넘기세요.</p></div><button className="text-slate-400 hover:text-ink" onClick={onClose}>✕</button></div>{!arr.length?<p className="rounded-xl bg-slate-50 p-4 text-[14px] text-slate-500">아직 저장된 산출물이 없어요. 결과 카드의 <b>📤 보관함</b> 버튼으로 저장하세요.</p>:<div className="space-y-2">{arr.map(a=><Card key={a.id} className="p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="truncate font-semibold text-ink">{a.title}</div><div className="text-[12px] text-slate-400">{a.at}</div></div><div className="flex shrink-0 gap-1">{edit===a.id?<Btn size="sm" onClick={()=>{wsUpdate(a.id,draft);setEdit(null);toast&&toast("ok","수정 저장됨");}}>저장</Btn>:<Btn size="sm" variant="outline" onClick={()=>{setEdit(a.id);setDraft(a.text);}}>편집</Btn>}<Btn size="sm" variant="outline" onClick={()=>{copyText(a.text);toast&&toast("ok","복사됨");}}>복사</Btn><Btn size="sm" variant="danger" onClick={()=>{wsDel(a.id);if(edit===a.id)setEdit(null);f(n=>n+1);}}>삭제</Btn></div></div>{edit===a.id?<textarea value={draft} onChange={e=>setDraft(e.target.value)} rows={8} className={cx(inputCls,"mt-2 resize-y text-[12px]")}/>:<pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[12px] text-slate-600">{String(a.text).slice(0,600)}</pre>}</Card>)}</div>}{!!arr.length&&<div className="mt-4 flex justify-end gap-2"><Btn size="sm" variant="outline" onClick={()=>download("uxax-workspace.json",JSON.stringify(arr,null,2),"application/json")}>↧ 전체 JSON</Btn><Btn size="sm" variant="ghost" onClick={()=>{if(confirm("보관함 전체를 비울까요?")){wsClear();f(n=>n+1);}}}>전체 비우기</Btn></div>}</div></Card></div>;}
-function WorkspaceFab({toast}){const[open,setOpen]=useState(false);const[,f]=useState(0);useEffect(()=>{const fn=()=>f(n=>n+1);wsBus.notify=fn;return()=>{if(wsBus.notify===fn)wsBus.notify=null;};},[]);const n=wsLoad().length;return <React.Fragment><button onClick={()=>setOpen(true)} className="no-print fixed bottom-5 right-5 z-[60] flex items-center gap-1.5 rounded-full bg-brand px-4 py-2.5 text-[13px] font-bold text-white shadow-pop hover:bg-brand-hover" title="보관함 (도구·앱 공유)">📋 보관함{n?(" "+n):""}</button>{open&&<WorkspaceModal onClose={()=>setOpen(false)} toast={toast}/>}</React.Fragment>;}
+function SlotStatusBadge({slot}){if(!slot)return <Chip className="bg-slate-100 text-slate-400 ring-slate-200/60">미작성</Chip>;const ok=slot.meta&&slot.meta.human_confirmed;return ok?<Chip className="bg-emerald-50 text-emerald-600 ring-emerald-100">✓ 검수 완료</Chip>:<Chip className="bg-amber-50 text-amber-600 ring-amber-100">검수 전</Chip>;}
+function WorkspaceModal({onClose,toast}){const[,f]=useState(0);const[edit,setEdit]=useState(null);const[draft,setDraft]=useState("");const[view,setView]=useState("slots");const reg=(window.UXAX&&UXAX.SLOT_REGISTRY)||{};const slots=(window.UXAX&&UXAX.listSlots&&UXAX.listSlots())||{};const order=Object.keys(reg);const filledN=order.filter(id=>slots[id]).length;const memos=wsLoad();const saveSlotMd=(id)=>{if(window.UXAX&&UXAX.setSlot)UXAX.setSlot(id,{md:draft});setEdit(null);f(n=>n+1);toast&&toast("ok","수정 저장됨");};const toggleConfirm=(id,on)=>{if(window.UXAX&&UXAX.confirmSlot)UXAX.confirmSlot(id,on);f(n=>n+1);};
+  return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={onClose}><Card className="max-h-[88vh] w-full max-w-2xl overflow-y-auto p-6 shadow-pop fade-in"><div onClick={e=>e.stopPropagation()}>
+    <div className="mb-4 flex items-center justify-between"><div><h3 className="text-lg font-bold text-ink">📋 프로젝트 보관함</h3><p className="text-[13px] text-slate-400">이 프로젝트의 산출물이 <b>단계별 템플릿</b>으로 채워집니다. 어디서 만들어 어디에 쓰는지·사람이 검수했는지 한눈에 보세요.</p></div><button className="text-slate-400 hover:text-ink" onClick={onClose}>✕</button></div>
+    <div className="mb-4 flex gap-1 rounded-xl bg-slate-100 p-1 text-[13px] font-semibold"><button onClick={()=>setView("slots")} className={cx("flex-1 rounded-lg px-3 py-1.5 transition",view==="slots"?"bg-white text-brand-hover shadow-sm":"text-slate-500")}>단계별 산출물 {filledN}/{order.length}</button><button onClick={()=>setView("memos")} className={cx("flex-1 rounded-lg px-3 py-1.5 transition",view==="memos"?"bg-white text-brand-hover shadow-sm":"text-slate-500")}>기타 메모{memos.length?(" · "+memos.length):""}</button></div>
+    {view==="slots"?<div className="space-y-2.5">{order.map(id=>{const r=reg[id];const s=slots[id];const open=edit===id;return <Card key={id} className={cx("p-3.5",s?"":"border-dashed bg-slate-50/60")}>
+      <div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex items-center gap-2"><Chip className="bg-brand-light text-brand-hover ring-brand/20">{r.phase}</Chip><span className="font-semibold text-ink">{r.task}</span></div><div className="mt-1 text-[12px] text-slate-400">{r.phaseName} 단계에서 만듦 · 다음 활용 → <b className="text-slate-500">{r.nextLabel}</b></div></div><SlotStatusBadge slot={s}/></div>
+      {s?<React.Fragment><div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-slate-400">{s.meta&&s.meta.model&&<span>🤖 {s.meta.model}</span>}{s.meta&&s.meta.items!=null&&<span>· {s.meta.items}건</span>}{s.meta&&s.meta.at&&<span>· {s.meta.at}</span>}</div>{open?<textarea value={draft} onChange={e=>setDraft(e.target.value)} rows={8} className={cx(inputCls,"mt-2 resize-y text-[12px]")}/>:<pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[12px] text-slate-600">{String(s.md||"(요약 텍스트 없음 — 구조화 데이터만 저장됨)").slice(0,800)}</pre>}<div className="mt-2 flex flex-wrap gap-1">{open?<Btn size="sm" onClick={()=>saveSlotMd(id)}>저장</Btn>:<Btn size="sm" variant="outline" onClick={()=>{setEdit(id);setDraft(String(s.md||""));}}>편집</Btn>}<Btn size="sm" variant="outline" onClick={()=>{copyText(String(s.md||""));toast&&toast("ok","복사됨");}}>복사</Btn>{s.meta&&s.meta.human_confirmed?<Btn size="sm" variant="ghost" onClick={()=>toggleConfirm(id,false)}>✓ 검수 해제</Btn>:<Btn size="sm" variant="soft" onClick={()=>toggleConfirm(id,true)}>내가 검수함</Btn>}</div></React.Fragment>:<div className="mt-1.5 text-[12.5px] text-slate-400">아직 비어 있어요 — <b className="text-slate-500">{r.phase==="P0"?"홈 화면 P0 폼":"위 탭"}</b>에서 만들면 여기 자동으로 담겨요.</div>}
+    </Card>;})}</div>:(!memos.length?<p className="rounded-xl bg-slate-50 p-4 text-[14px] text-slate-500">자유 메모가 없어요. 결과 카드의 <b>📤 보관함</b> 버튼으로 저장하면 여기에 모여요.</p>:<div className="space-y-2">{memos.map(a=><Card key={a.id} className="p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="truncate font-semibold text-ink">{a.title}</div><div className="text-[12px] text-slate-400">{a.at}</div></div><div className="flex shrink-0 gap-1">{edit===a.id?<Btn size="sm" onClick={()=>{wsUpdate(a.id,draft);setEdit(null);toast&&toast("ok","수정 저장됨");}}>저장</Btn>:<Btn size="sm" variant="outline" onClick={()=>{setEdit(a.id);setDraft(a.text);}}>편집</Btn>}<Btn size="sm" variant="outline" onClick={()=>{copyText(a.text);toast&&toast("ok","복사됨");}}>복사</Btn><Btn size="sm" variant="danger" onClick={()=>{wsDel(a.id);if(edit===a.id)setEdit(null);f(n=>n+1);}}>삭제</Btn></div></div>{edit===a.id?<textarea value={draft} onChange={e=>setDraft(e.target.value)} rows={8} className={cx(inputCls,"mt-2 resize-y text-[12px]")}/>:<pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[12px] text-slate-600">{String(a.text).slice(0,600)}</pre>}</Card>)}</div>)}
+    {view==="memos"&&!!memos.length&&<div className="mt-4 flex justify-end gap-2"><Btn size="sm" variant="outline" onClick={()=>download("uxax-workspace.json",JSON.stringify(memos,null,2),"application/json")}>↧ 메모 JSON</Btn><Btn size="sm" variant="ghost" onClick={()=>{if(confirm("기타 메모를 전부 비울까요?")){wsClear();f(n=>n+1);}}}>메모 비우기</Btn></div>}
+    {view==="slots"&&<div className="mt-4 flex justify-end"><Btn size="sm" variant="outline" onClick={()=>{const p=window.UXAX&&UXAX.loadProject&&UXAX.loadProject();download("uxax-project.json",JSON.stringify(p||{},null,2),"application/json");}}>↧ 프로젝트 전체 JSON</Btn></div>}
+  </div></Card></div>;}
+function WorkspaceFab({toast}){const[open,setOpen]=useState(false);const[,f]=useState(0);useEffect(()=>{const fn=()=>f(n=>n+1);wsBus.notify=fn;return()=>{if(wsBus.notify===fn)wsBus.notify=null;};},[]);const _slots=(window.UXAX&&UXAX.listSlots&&UXAX.listSlots())||{};const _filled=Object.keys((window.UXAX&&UXAX.SLOT_REGISTRY)||{}).filter(id=>_slots[id]).length;const n=_filled+wsLoad().length;return <React.Fragment><button onClick={()=>setOpen(true)} className="no-print fixed bottom-5 right-5 z-[60] flex items-center gap-1.5 rounded-full bg-brand px-4 py-2.5 text-[13px] font-bold text-white shadow-pop hover:bg-brand-hover" title="프로젝트 보관함 (단계별 산출물 + 메모)">📋 보관함{n?(" "+n):""}</button>{open&&<WorkspaceModal onClose={()=>setOpen(false)} toast={toast}/>}</React.Fragment>;}
 function StepHead({n,title,sub,done}){return <div className="mb-3 flex items-center gap-3"><div className={cx("flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold",done?"bg-emerald-500 text-white":"bg-brand text-white")}>{done?"✓":n}</div><div><div className="text-[17px] font-bold text-ink">{title}</div>{sub&&<div className="text-[13px] text-slate-400">{sub}</div>}</div></div>;}
 function SeverityChip({s}){const m={"상":"bg-rose-50 text-rose-600 ring-rose-100","중":"bg-amber-50 text-amber-600 ring-amber-100","하":"bg-slate-100 text-slate-500 ring-slate-200/60"};return <Chip className={m[s]||"bg-slate-100 text-slate-500"}>{s}</Chip>;}
 /* ===== 학습 레이어 (전체 프로세스 내비 + 초급자 ?도움말 + 예제) ===== */
@@ -170,6 +182,9 @@ function UsabilityPanel({settings,openSettings,toast}){
   const K="uxax_p5a1_v1";const sv=load(K,{});
   const[transcript,setTranscript]=useState(sv.transcript||"");const[tasks,setTasks]=useState(sv.tasks||"");const[res,setRes]=useState(sv.res||null);const[busy,setBusy]=useState(false);
   useEffect(()=>{save(K,{transcript,tasks,res})},[transcript,tasks,res]);
+  const usabilityMd=()=>res&&!res.raw?("# 사용성 세션 분석\n## 과업\n"+arr(res.tasks).map(t=>"- "+S(t.name)+": "+S(t.result)).join("\n")+"\n\n## 이슈\n"+arr(res.issues).map(x=>"- ["+S(x.severity)+"] "+S(x.desc)+(x.timestamp?" ("+S(x.timestamp)+")":"")).join("\n")+"\n\n## 요약\n"+S(res.summary)):"";
+  const[confirmed,setConfirmed]=useState(()=>{const s=(window.UXAX&&UXAX.getSlot&&UXAX.getSlot("P6.usability"));return !!(s&&s.meta&&s.meta.human_confirmed);});
+  const saveSlot=()=>{if(window.UXAX&&UXAX.setSlot&&res&&!res.raw)UXAX.setSlot("P6.usability",{data:{res},md:usabilityMd(),meta:{model:backendLabel(settings),items:arr(res.issues).length}});};
   const run=async()=>{if(!transcript.trim()){toast("error","전사를 입력하세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setRes(null);try{const out=await runLLM(settings,{system:SYS,messages:[{role:"user",content:buildUsabilityPrompt(transcript,tasks)}],maxTokens:2400,stream:false,meta:{who:"사용성 세션 분석"}});const p=parseJsonLoose(out);setRes(p&&typeof p==="object"?p:{raw:out});toast("ok","분석 완료");}catch(e){toast("error","실패: "+(e.message||e));}finally{setBusy(false);}};
   return <div className="space-y-6">
     <Guide defaultOpen={!res}
@@ -196,7 +211,7 @@ function UsabilityPanel({settings,openSettings,toast}){
       <Field label="테스트 전사"><textarea className={cx(inputCls,"mt-3 resize-y")} rows={7} value={transcript} onChange={e=>setTranscript(e.target.value)} placeholder="[00:30] 진행자: 상품을 등록해 보세요\n[00:45] 참가자: 어... 등록 버튼이 어디 있죠? ..."/></Field>
       <div className="mt-4"><Btn size="lg" onClick={run} disabled={busy}>{busy?<Spinner size={16}/>:"✨"} 세션 분석 <span className="font-normal opacity-80">· {backendLabel(settings)}</span></Btn></div>
     </Card>
-    {res&&<Card className="p-6 fade-in"><div className="mb-3 flex items-center justify-between"><StepHead n={2} title="분석 결과" done={true}/><WsSave title="사용성 세션 분석" getText={()=>res&&!res.raw?("# 사용성 세션 분석\n## 과업\n"+arr(res.tasks).map(t=>"- "+S(t.name)+": "+S(t.result)).join("\n")+"\n\n## 이슈\n"+arr(res.issues).map(x=>"- ["+S(x.severity)+"] "+S(x.desc)+(x.timestamp?" ("+S(x.timestamp)+")":"")).join("\n")+"\n\n## 요약\n"+S(res.summary)):""} toast={toast}/></div>
+    {res&&<Card className="p-6 fade-in"><div className="mb-3 flex items-center justify-between"><StepHead n={2} title="분석 결과" done={true}/><div className="flex flex-wrap gap-2"><WsSave title="사용성 세션 분석" getText={usabilityMd} toast={toast}/>{!res.raw&&<Btn size="sm" variant={confirmed?"primary":"outline"} onClick={()=>{const nv=!confirmed;saveSlot();if(window.UXAX&&UXAX.confirmSlot)UXAX.confirmSlot("P6.usability",nv);setConfirmed(nv);toast("ok",nv?"검수 완료로 표시 — 다음 단계에서 ‘사람 확인됨’으로 보여요":"검수 표시를 해제했어요");}}>{confirmed?"✓ 검수 완료":"☐ 내가 검수함"}</Btn>}</div></div>
       {res.raw?<pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre>:<div className="space-y-5">
         {!!arr(res.tasks).length&&<div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">과업 결과</div><div className="flex flex-wrap gap-2">{res.tasks.map((t,i)=>{const c={"성공":"bg-emerald-50 text-emerald-600 ring-emerald-100","실패":"bg-rose-50 text-rose-600 ring-rose-100","지연":"bg-amber-50 text-amber-600 ring-amber-100"}[t.result]||"";return <Chip key={i} className={c}>{S(t.name)} · {S(t.result)}</Chip>;})}</div></div>}
         {!!arr(res.issues).length&&<div><div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">사용성 이슈</div><div className="space-y-2">{res.issues.map((x,i)=><Card key={i} className="flex items-start justify-between gap-3 p-3"><div><div className="text-[15px] text-ink">{S(x.desc)}</div>{x.timestamp&&<div className="text-[12px] text-slate-400">⏱ {S(x.timestamp)}</div>}</div><SeverityChip s={x.severity}/></Card>)}</div></div>}
@@ -205,7 +220,7 @@ function UsabilityPanel({settings,openSettings,toast}){
     </Card>}
     {res&&!res.raw&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
       <span className="text-[14px] font-bold text-ink">✅ 세션 분석 완료! 다음 단계 →</span>
-      <Btn size="sm" onClick={()=>{wsAdd("사용성 세션 분석","# 사용성 세션 분석\n## 과업\n"+arr(res.tasks).map(t=>"- "+S(t.name)+": "+S(t.result)).join("\n")+"\n\n## 이슈\n"+arr(res.issues).map(x=>"- ["+S(x.severity)+"] "+S(x.desc)).join("\n")+"\n\n## 요약\n"+S(res.summary));toast("ok","보관함 저장 — P7에서 📥 가져오기로 이어가세요");location.href="./P7_피드백운영스튜디오.html#feedback";}}>📤 저장하고 P7 피드백·운영으로 →</Btn>
+      <Btn size="sm" onClick={()=>{saveSlot();wsAdd("사용성 세션 분석","# 사용성 세션 분석\n## 과업\n"+arr(res.tasks).map(t=>"- "+S(t.name)+": "+S(t.result)).join("\n")+"\n\n## 이슈\n"+arr(res.issues).map(x=>"- ["+S(x.severity)+"] "+S(x.desc)).join("\n")+"\n\n## 요약\n"+S(res.summary));toast("ok","보관함 저장 — P7에서 📥 가져오기로 이어가세요");location.href="./P7_피드백운영스튜디오.html#feedback";}}>📤 저장하고 P7 피드백·운영으로 →</Btn>
       <HelpCue title="사용성 다음은?" faqs={[{q:"사용성 이슈 다음은요?",a:"발견한 이슈를 P7에서 피드백·운영 백로그로 모으거나, 심하면 P3 우선순위로 돌려 재설계해요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
     </div>}
   </div>;
@@ -221,6 +236,9 @@ function HeuristicPanel({settings,openSettings,toast}){
   const run=async()=>{if(!artifact.trim()&&!img){toast("error","화면 설명/코드 또는 이미지를 입력하세요");return;}if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}setBusy(true);setRes(null);try{const prompt=buildHeuristicPrompt(artifact);let content=prompt;if(img&&backendVision(settings))content=[img.part,{type:"text",text:prompt}];const out=await runLLM(settings,{system:SYS,messages:[{role:"user",content}],maxTokens:2400,stream:false,meta:{who:"휴리스틱·접근성"}});const p=parseJsonLoose(out);setRes(p&&p.issues?p.issues:{raw:out});if(p&&p.issues)setRes(p.issues);toast("ok","점검 완료");}catch(e){toast("error","실패: "+(e.message||e));}finally{setBusy(false);}};
   const ratio=contrastRatio(fg,bg);
   const issues=Array.isArray(res)?res:null;
+  const heuristicMd=()=>issues?("# 휴리스틱·접근성 점검\n"+issues.map(x=>"- ["+S(x.severity)+"] "+S(x.rule)+": "+S(x.desc)+" → "+S(x.fix)).join("\n")):"";
+  const[confirmed,setConfirmed]=useState(()=>{const s=(window.UXAX&&UXAX.getSlot&&UXAX.getSlot("P6.heuristic"));return !!(s&&s.meta&&s.meta.human_confirmed);});
+  const saveSlot=()=>{if(window.UXAX&&UXAX.setSlot&&issues)UXAX.setSlot("P6.heuristic",{data:{issues},md:heuristicMd(),meta:{model:backendLabel(settings),items:issues.length}});};
   return <div className="space-y-6">
     <Guide defaultOpen={!res}
       what="화면(설명·코드 또는 이미지)을 닐슨 휴리스틱 10원칙과 WCAG 접근성 기준으로 점검해 위반·심각도·수정안을 뽑는 도구입니다. 오른쪽에 ‘색대비 계산기’가 내장돼 전경/배경 색의 WCAG 대비비와 AA/AAA 통과를 즉시 계산합니다."
@@ -259,13 +277,13 @@ function HeuristicPanel({settings,openSettings,toast}){
           </div></div>:<div className="mt-3 text-center text-[12px] text-slate-400">유효한 #RRGGBB 입력</div>}
       </Card></div>
     </div>
-    {issues&&<Card className="p-6 fade-in"><div className="mb-3 flex items-center justify-between"><StepHead n={2} title="점검 리포트" sub={`${issues.length}건`} done={true}/><WsSave title="휴리스틱·접근성 점검" getText={()=>issues?("# 휴리스틱·접근성 점검\n"+issues.map(x=>"- ["+S(x.severity)+"] "+S(x.rule)+": "+S(x.desc)+" → "+S(x.fix)).join("\n")):""} toast={toast}/></div>
+    {issues&&<Card className="p-6 fade-in"><div className="mb-3 flex items-center justify-between"><StepHead n={2} title="점검 리포트" sub={`${issues.length}건`} done={true}/><div className="flex flex-wrap gap-2"><WsSave title="휴리스틱·접근성 점검" getText={heuristicMd} toast={toast}/><Btn size="sm" variant={confirmed?"primary":"outline"} onClick={()=>{const nv=!confirmed;saveSlot();if(window.UXAX&&UXAX.confirmSlot)UXAX.confirmSlot("P6.heuristic",nv);setConfirmed(nv);toast("ok",nv?"검수 완료로 표시 — 다음 단계에서 ‘사람 확인됨’으로 보여요":"검수 표시를 해제했어요");}}>{confirmed?"✓ 검수 완료":"☐ 내가 검수함"}</Btn></div></div>
       <div className="space-y-2">{issues.map((x,i)=><Card key={i} className="p-3"><div className="flex items-start justify-between gap-3"><div className="font-semibold text-ink">{S(x.rule)}</div><SeverityChip s={x.severity}/></div><div className="mt-1 text-[14px] text-slate-600">{S(x.desc)}</div><div className="mt-1.5 rounded-lg bg-emerald-50 p-2 text-[13px] text-emerald-800">✔ {S(x.fix)}</div></Card>)}</div>
     </Card>}
     {res&&res.raw&&<Card className="p-6 fade-in"><pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre></Card>}
     {issues&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
       <span className="text-[14px] font-bold text-ink">✅ 점검 완료! 다음 단계 →</span>
-      <Btn size="sm" onClick={()=>{wsAdd("휴리스틱·접근성 점검","# 휴리스틱·접근성 점검\n"+issues.map(x=>"- ["+S(x.severity)+"] "+S(x.rule)+": "+S(x.desc)+" → "+S(x.fix)).join("\n"));toast("ok","보관함 저장 — ③ 디자인 QA 탭에서 이어가세요");location.hash="qa";}}>📤 저장하고 ③ 디자인 QA로 →</Btn>
+      <Btn size="sm" onClick={()=>{saveSlot();wsAdd("휴리스틱·접근성 점검","# 휴리스틱·접근성 점검\n"+issues.map(x=>"- ["+S(x.severity)+"] "+S(x.rule)+": "+S(x.desc)+" → "+S(x.fix)).join("\n"));toast("ok","보관함 저장 — ③ 디자인 QA 탭에서 이어가세요");location.hash="qa";}}>📤 저장하고 ③ 디자인 QA로 →</Btn>
       <HelpCue title="점검 다음은?" faqs={[{q:"휴리스틱 다음은요?",a:"발견한 위반을 P5에서 디자인으로 고치고, 구현 후 ③ 디자인 QA로 시안과 일치하는지 검수해요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
     </div>}
   </div>;
@@ -281,6 +299,9 @@ function QaPanel({settings,openSettings,toast}){
   const runDiff=async()=>{if(!dImg||!iImg){toast("error","디자인·구현 이미지를 모두 올리세요");return;}setDiffBusy(true);try{const d=await pixelDiff(dImg.url,iImg.url);setDiff(d);toast("ok","픽셀 차이 "+d.pct.toFixed(1)+"%");}catch(e){toast("error","diff 실패: "+(e.message||e));}finally{setDiffBusy(false);}};
   const runVision=async()=>{if(!backendReady(settings)){toast("error","AI 엔진을 설정하세요");openSettings();return;}if(!backendVision(settings)){toast("error","비전 분석은 API/수동 모드에서 가능 (또는 픽셀 diff만 사용)");return;}if(!dImg||!iImg){toast("error","두 이미지를 올리세요");return;}setBusy(true);setRes(null);try{const prompt=buildQaPrompt("","");const content=[{type:"text",text:"[디자인]"},dImg.part,{type:"text",text:"[구현]"},iImg.part,{type:"text",text:prompt}];const out=await runLLM(settings,{system:SYS,messages:[{role:"user",content}],maxTokens:2400,stream:false,meta:{who:"디자인 QA"}});const p=parseJsonLoose(out);setRes(p&&p.diffs?p.diffs:{raw:out});if(p&&p.diffs)setRes(p.diffs);toast("ok","비전 분석 완료");}catch(e){toast("error","실패: "+(e.message||e));}finally{setBusy(false);}};
   const diffs=Array.isArray(res)?res:null;
+  const qaMd=()=>"# 디자인 QA\n"+(diff?("픽셀 차이: "+diff.pct.toFixed(2)+"%\n"):"")+(diffs?diffs.map(x=>"- ["+S(x.severity)+"] "+S(x.element)+": "+S(x.expected)+" → "+S(x.actual)).join("\n"):"");
+  const[confirmed,setConfirmed]=useState(()=>{const s=(window.UXAX&&UXAX.getSlot&&UXAX.getSlot("P6.qa"));return !!(s&&s.meta&&s.meta.human_confirmed);});
+  const saveSlot=()=>{if(window.UXAX&&UXAX.setSlot&&(diff||diffs))UXAX.setSlot("P6.qa",{data:{diffPct:diff?diff.pct:null,diffs:diffs||null},md:qaMd(),meta:{model:backendLabel(settings),items:diffs?diffs.length:0}});};
   return <div className="space-y-6">
     <Guide defaultOpen={!diff&&!diffs}
       what="디자인 시안과 실제 구현 화면을 비교해 ① 브라우저에서 픽셀 단위 차이를 계산(다른 부분 빨갛게 표시 + 차이 %)하고, ② (비전 모드) 간격·색·타이포·정렬 차이를 항목별로 분석해 주는 디자인 QA 도구입니다."
@@ -317,7 +338,8 @@ function QaPanel({settings,openSettings,toast}){
     {res&&res.raw&&<Card className="p-6 fade-in"><pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{res.raw}</pre></Card>}
     {(diff||diffs)&&<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-faint p-4 fade-in">
       <span className="text-[14px] font-bold text-ink">✅ QA 완료! 다음 단계 →</span>
-      <Btn size="sm" onClick={()=>{wsAdd("디자인 QA","# 디자인 QA\n"+(diff?("픽셀 차이: "+diff.pct.toFixed(2)+"%\n"):"")+(diffs?diffs.map(x=>"- ["+S(x.severity)+"] "+S(x.element)+": "+S(x.expected)+" → "+S(x.actual)).join("\n"):""));toast("ok","보관함 저장 — P7 운영에서 이어가세요");location.href="./P7_피드백운영스튜디오.html#ops";}}>📤 저장하고 P7 운영으로 →</Btn>
+      <Btn size="sm" variant={confirmed?"primary":"outline"} onClick={()=>{const nv=!confirmed;saveSlot();if(window.UXAX&&UXAX.confirmSlot)UXAX.confirmSlot("P6.qa",nv);setConfirmed(nv);toast("ok",nv?"검수 완료로 표시 — 다음 단계에서 ‘사람 확인됨’으로 보여요":"검수 표시를 해제했어요");}}>{confirmed?"✓ 검수 완료":"☐ 내가 검수함"}</Btn>
+      <Btn size="sm" onClick={()=>{saveSlot();wsAdd("디자인 QA",qaMd());toast("ok","보관함 저장 — P7 운영에서 이어가세요");location.href="./P7_피드백운영스튜디오.html#ops";}}>📤 저장하고 P7 운영으로 →</Btn>
       <HelpCue title="QA 다음은?" faqs={[{q:"QA 다음은요?",a:"불일치를 개발 수정 요청으로 보내고, 통과하면 배포 후 P7에서 운영·피드백을 모아요."}]} settings={settings} openSettings={openSettings} toast={toast}/>
     </div>}
   </div>;
@@ -325,6 +347,70 @@ function QaPanel({settings,openSettings,toast}){
 
 /* ===== Root ===== */
 const TABS=[{id:"usability",label:"① 사용성 세션",pid:"P5-A1"},{id:"heuristic",label:"② 휴리스틱·접근성",pid:"P5-A2"},{id:"qa",label:"③ 디자인 QA",pid:"P6-A3"}];
+/* 판단 게이트 — "이 단계 시작·마무리해도 되나" 6칸 자가점검(초급자 판단 학습). dossier.gates[phase]에 저장 */
+function GatePanel({phase}){
+  const[open,setOpen]=useState(false);const[,force]=useState(0);
+  const g=(window.UXAX&&UXAX.getGate&&UXAX.getGate(phase))||{};
+  const auto=(window.UXAX&&UXAX.deriveGate&&UXAX.deriveGate(phase))||{};
+  const fields=(window.UXAX&&UXAX.GATE_FIELDS)||[];
+  const brief=(window.UXAX&&UXAX.getBrief&&UXAX.getBrief())||{};
+  // P0 정의 → 게이트 연결: 목표는 P0 '한 줄 정의', 합격선은 P0 '성공 기준'에서 가져올 수 있게(프리필).
+  const PREFILL={goal:{src:(brief.oneline||"").trim(),label:"P0 한 줄 정의 가져오기"},passLine:{src:(brief.success||"").trim(),label:"P0 성공 기준 가져오기"}};
+  const hasBrief=!!((brief.oneline||"").trim()||(brief.success||"").trim());
+  const val=(k)=>g[k]||"";const autoOf=(k)=>auto[k];
+  const setVal=(k,v)=>{if(window.UXAX&&UXAX.setGate)UXAX.setGate(phase,{[k]:v});force(n=>n+1);};
+  const sat=fields.filter(f=>f.kind==="auto"?(autoOf(f.key)&&autoOf(f.key).ok):!!String(val(f.key)).trim()).length;
+  const allOk=fields.length>0&&sat===fields.length;const confirmed=!!g.confirmed;
+  return <div className="mb-5 rounded-2xl border border-hair bg-white shadow-soft">
+    <button onClick={()=>setOpen(o=>!o)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
+      <span className="text-lg">🚦</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2 text-[15px] font-bold text-ink">단계 점검 · 판단 게이트<Chip className={allOk?"bg-emerald-50 text-emerald-600 ring-emerald-100":"bg-amber-50 text-amber-600 ring-amber-100"}>{allOk?"준비 완료":"점검 "+sat+"/"+fields.length}</Chip>{confirmed&&<Chip className="bg-brand-light text-brand-hover ring-brand/20">✓ 마무리 점검됨</Chip>}</div>
+        <div className="text-[12.5px] text-slate-400">이 단계를 <b>시작·마무리해도 되는지</b> 6칸으로 스스로 점검 — “무엇을 어디까지” 판단하는 법을 배워요.</div>
+      </div>
+      <span className="shrink-0 text-[13px] text-slate-400">{open?"접기 ▲":"펼치기 ▼"}</span>
+    </button>
+    {open&&<div className="border-t border-hair p-4">
+      {hasBrief
+        ? <div className="mb-3 rounded-xl border border-brand/20 bg-brand-faint p-3">
+            <div className="flex flex-wrap items-center gap-1.5 text-[12.5px] font-bold text-brand-hover">🧭 이 프로젝트의 북극성<span className="font-normal text-slate-400">— 프로젝트 정의(P0)에서 정함</span></div>
+            {(brief.oneline||"").trim()&&<div className="mt-1 text-[12.5px] leading-relaxed text-slate-600"><b className="text-ink">한 줄 정의</b> · {brief.oneline}</div>}
+            {(brief.success||"").trim()&&<div className="mt-0.5 text-[12.5px] leading-relaxed text-slate-600"><b className="text-ink">성공 기준</b> · {brief.success}</div>}
+            <div className="mt-1.5 text-[11.5px] leading-relaxed text-slate-400">리서치하며 생각이 바뀌면 <a href="./index.html" className="font-semibold text-brand-hover hover:underline">홈에서 정의를 고치세요 →</a> 정의는 고정이 아니라 같이 자라요.</div>
+          </div>
+        : <div className="mb-3 rounded-xl border border-amber-100 bg-amber-50/50 p-3 text-[12.5px] leading-relaxed text-amber-700">아직 <b>프로젝트 정의(P0)</b>가 비어 있어요 — <a href="./index.html" className="font-semibold underline">홈에서 먼저 정하면</a> 이 단계의 목표·합격선이 또렷해져요.</div>}
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        {fields.map(f=>{const a=autoOf(f.key);const pf=PREFILL[f.key];const empty=!String(val(f.key)).trim();return <div key={f.key} className={cx("rounded-xl border p-3",f.kind==="auto"?(a&&a.ok?"border-emerald-100 bg-emerald-50/40":"border-amber-100 bg-amber-50/40"):"border-hair bg-white")}>
+          <div className="flex items-center gap-1.5 text-[13px] font-bold text-ink"><span>{f.icon}</span><span>{f.label}</span>{f.kind==="auto"&&<span className={cx("ml-auto text-[12px] font-bold",a&&a.ok?"text-emerald-600":"text-amber-600")}>{a&&a.ok?"✓ 충족":"⚠ 확인"}</span>}</div>
+          <div className="mt-0.5 text-[12px] leading-relaxed text-slate-500">{f.help}</div>
+          {f.kind==="auto"?<div className={cx("mt-1.5 text-[12.5px] font-medium",a&&a.ok?"text-emerald-700":"text-amber-700")}>{a?a.why:""}</div>:<div className="mt-1.5"><textarea value={val(f.key)} onChange={e=>setVal(f.key,e.target.value)} placeholder={f.ph} rows={2} className={cx(inputCls,"resize-y text-[13px]")}/>{pf&&pf.src&&empty&&<button type="button" onClick={()=>setVal(f.key,pf.src)} className="mt-1 text-[11.5px] font-semibold text-brand-hover hover:underline">↧ {pf.label}</button>}</div>}
+        </div>;})}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-[12.5px] text-slate-500">{allOk?"6칸 모두 충족 — 자신 있게 진행하거나 다음 단계로 넘어가도 좋아요.":"빈 칸·⚠ 항목을 채우면 더 단단해져요. (강제는 아니에요 — 판단을 돕는 체크리스트)"}</div>
+        <Btn size="sm" variant={confirmed?"ghost":"soft"} onClick={()=>{if(window.UXAX&&UXAX.setGate)UXAX.setGate(phase,{confirmed:!confirmed});force(n=>n+1);}}>{confirmed?"✓ 마무리 점검 해제":"이 단계 마무리 점검 통과로 표시"}</Btn>
+      </div>
+    </div>}
+  </div>;
+}
+/* 하단 단계 네비 — 같은 단계 안 탭 이동(이전/다음) + 이전 단계 돌아가기 + 다음 단계로 진행 */
+function StageNav({tab,setTab}){
+  const i=TABS.findIndex(t=>t.id===tab);const prevTab=TABS[i-1],nextTab=TABS[i+1];
+  const pi=PROCESS.findIndex(p=>p.id===CURRENT_PHASE);const prevPhase=PROCESS[pi-1],nextPhase=PROCESS[pi+1];const curName=(PROCESS[pi]||{}).name||"";
+  return <nav className="no-print mx-auto mt-10 mb-36 max-w-[1100px] px-5">
+    <div className="rounded-2xl border border-hair bg-white p-4 shadow-soft">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <button onClick={()=>prevTab&&setTab(prevTab.id)} disabled={!prevTab} className={cx("inline-flex min-w-0 items-center gap-1.5 rounded-[10px] border border-hair px-3 py-2 text-[13px] font-semibold transition",prevTab?"text-slate-600 hover:bg-slate-50":"cursor-default opacity-40")}>← <span className="truncate">{prevTab?prevTab.label:"이 단계 처음"}</span></button>
+        <div className="shrink-0 text-center text-[12px] text-slate-400">{CURRENT_PHASE} {curName} 안에서 <b className="text-brand-hover">{i+1} / {TABS.length}</b></div>
+        <button onClick={()=>nextTab&&setTab(nextTab.id)} disabled={!nextTab} className={cx("inline-flex min-w-0 items-center gap-1.5 rounded-[10px] border border-hair px-3 py-2 text-[13px] font-semibold transition",nextTab?"text-slate-600 hover:bg-slate-50":"cursor-default opacity-40")}><span className="truncate">{nextTab?nextTab.label:"이 단계 마지막"}</span> →</button>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hair pt-3">
+        <a href={prevPhase?("./"+prevPhase.file):"./index.html"} className="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-[13px] font-semibold text-slate-500 hover:bg-slate-100">↩ {prevPhase?(prevPhase.id+" "+prevPhase.name+"로 돌아가기"):"홈 · 프로젝트 정의(P0)"}</a>
+        {nextPhase&&<a href={"./"+nextPhase.file} className="inline-flex items-center gap-2 rounded-[10px] bg-brand px-4 py-2.5 text-[13px] font-bold text-white shadow-sm hover:bg-brand-hover" title="이 단계를 마쳤다면 다음 단계로">다음 단계 → {nextPhase.id} {nextPhase.name}</a>}
+      </div>
+    </div>
+  </nav>;
+}
 function App(){
   const[settings,setSettings]=useState(()=>{const s=load(SETTINGS_KEY,null);const fc=(window.UXAX_CONFIG&&window.UXAX_CONFIG.anthropicApiKey)||"";const def={backend:fc?"api":"manual",apiKey:fc,model:MODELS[0].id,ollamaUrl:"http://127.0.0.1:11434",ollamaModel:"",webllmModel:WEBLLM_PREFERRED[0]};return s?{...def,...s}:def;});
   const[tab,setTab]=useState(()=>{const h=(location.hash||"").replace("#","");return TABS.find(t=>t.id===h)?h:"usability";});
@@ -342,10 +428,12 @@ function App(){
       <div className="mx-auto max-w-[1100px] overflow-x-auto px-3"><nav className="flex gap-1">{TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} className={cx("flex items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition",tab===t.id?"border-brand text-brand-hover":"border-transparent text-slate-500 hover:text-ink")}>{t.label}<span className="text-[11px] text-slate-400">{t.pid}</span></button>)}</nav></div>
     </header>
     <main className="mx-auto max-w-[1100px] px-5 py-7">
+      <GatePanel phase={CURRENT_PHASE}/>
       <div className={tab==="usability"?"":"hidden"}><UsabilityPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
       <div className={tab==="heuristic"?"":"hidden"}><HeuristicPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
       <div className={tab==="qa"?"":"hidden"}><QaPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
     </main>
+    <StageNav tab={tab} setTab={setTab}/>
     {showSettings&&<SettingsModal settings={settings} onSave={(s)=>{setSettings({...s,backendChosen:true});setShowSettings(false);toastFn("ok","설정 저장됨");}} onClose={()=>setShowSettings(false)}/>}
     <ManualModal req={manualBridge.current()} queueCount={manualBridge.count()} onSubmit={(t)=>manualBridge.resolveCurrent(t)} onCancel={()=>manualBridge.rejectCurrent()}/>
     <ProgressOverlay state={webllmLoader} title="브라우저 내장 AI 준비 중" emoji="🌐"/>

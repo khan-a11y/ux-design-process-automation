@@ -29,7 +29,25 @@
     "P2.affinity":   { phase: "P2", phaseName: "정의", task: "어피니티 클러스터링(관찰 묶기)", next: "P2.hmw", nextLabel: "P2 정의 · HMW" },
     "P2.journey":    { phase: "P2", phaseName: "정의", task: "사용자 여정맵", next: "P3.idea", nextLabel: "P3 아이디에이션" },
     "P2.hmw":        { phase: "P2", phaseName: "정의", task: "인사이트 → HMW·POV", next: "P3.idea", nextLabel: "P3 아이디에이션" },
-    "P2.prd":        { phase: "P2", phaseName: "정의", task: "요구사항(PRD) 초안", next: "P3.priority", nextLabel: "P3 우선순위" }
+    "P2.prd":        { phase: "P2", phaseName: "정의", task: "요구사항(PRD) 초안", next: "P3.priority", nextLabel: "P3 우선순위" },
+    "P3.idea":       { phase: "P3", phaseName: "아이디에이션", task: "아이디어 발산", next: "P3.priority", nextLabel: "P3 우선순위" },
+    "P3.ia":         { phase: "P3", phaseName: "아이디에이션", task: "정보구조(IA)·사이트맵", next: "P3.flow", nextLabel: "P3 사용자 플로우" },
+    "P3.flow":       { phase: "P3", phaseName: "아이디에이션", task: "사용자 플로우", next: "P5.wire", nextLabel: "P5 와이어프레임" },
+    "P3.priority":   { phase: "P3", phaseName: "아이디에이션", task: "우선순위 스코어링", next: "P4.writing", nextLabel: "P4 콘텐츠" },
+    "P4.writing":    { phase: "P4", phaseName: "콘텐츠", task: "UX 라이팅", next: "P5.wire", nextLabel: "P5 와이어프레임" },
+    "P4.localize":   { phase: "P4", phaseName: "콘텐츠", task: "다국어 현지화", next: "P5.wire", nextLabel: "P5 와이어프레임" },
+    "P4.dummy":      { phase: "P4", phaseName: "콘텐츠", task: "더미 콘텐츠 생성", next: "P5.wire", nextLabel: "P5 와이어프레임" },
+    "P5.wire":       { phase: "P5", phaseName: "디자인·핸드오프", task: "와이어프레임", next: "P6.usability", nextLabel: "P6 사용성 검증" },
+    "P5.token":      { phase: "P5", phaseName: "디자인·핸드오프", task: "디자인 토큰", next: "P5.codespec", nextLabel: "P5 코드 스펙" },
+    "P5.codespec":   { phase: "P5", phaseName: "디자인·핸드오프", task: "코드 스펙", next: "P6.qa", nextLabel: "P6 디자인 QA" },
+    "P5.changelog":  { phase: "P5", phaseName: "디자인·핸드오프", task: "체인지로그", next: "P7.feedback", nextLabel: "P7 피드백" },
+    "P6.usability":  { phase: "P6", phaseName: "품질검증", task: "사용성 세션 분석", next: "P7.feedback", nextLabel: "P7 피드백" },
+    "P6.heuristic":  { phase: "P6", phaseName: "품질검증", task: "휴리스틱·접근성 점검", next: "P5.wire", nextLabel: "P5 와이어프레임(수정)" },
+    "P6.qa":         { phase: "P6", phaseName: "품질검증", task: "디자인 QA", next: "P5.wire", nextLabel: "P5 와이어프레임(수정)" },
+    "P7.feedback":   { phase: "P7", phaseName: "피드백·운영", task: "피드백 분류", next: "P1.interview", nextLabel: "P1 리서치(다음 사이클)" },
+    "P7.ab":         { phase: "P7", phaseName: "피드백·운영", task: "A/B 결과 해석", next: "P3.priority", nextLabel: "P3 우선순위(반영)" },
+    "P7.anomaly":    { phase: "P7", phaseName: "피드백·운영", task: "이상 탐지", next: "P7.ops", nextLabel: "P7 운영 피드백" },
+    "P7.ops":        { phase: "P7", phaseName: "피드백·운영", task: "운영 피드백 정리", next: "P1.interview", nextLabel: "P1 리서치(다음 사이클)" }
   };
 
   /* ---------- 프로젝트 dossier ---------- */
