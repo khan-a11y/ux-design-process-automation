@@ -11,11 +11,11 @@ set "OLLAMA_PATH=%LOCALAPPDATA%\Programs\Ollama\ollama.exe"
 
 echo.
 echo   Starting local AI server at http://127.0.0.1:11434
-echo   Recommended Korean model: exaone3.5:7.8b
+echo   Recommended Korean model: qwen2.5:3b
 echo   Keep this window open while you use UX×AX Studio.
 echo.
 echo   To add a model, open a new terminal and run:
-echo       "%OLLAMA_PATH%" pull exaone3.5:7.8b
+echo       "%OLLAMA_PATH%" pull qwen2.5:3b
 echo       "%OLLAMA_PATH%" pull qwen2.5:7b
 echo.
 

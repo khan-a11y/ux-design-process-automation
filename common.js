@@ -145,16 +145,16 @@
      task: "transcribe" | "ko_generate" | "embed"
      반환: { whisper, ollama, api, note } 중 task에 맞는 권장값
      - 전사: 최고 정확도 whisper(large-v3-turbo)
-     - 한국어 생성(요약·코딩·HMW·가이드): 로컬이면 EXAONE 우선, API면 균형 모델
+     - 한국어 생성(요약·코딩·HMW·가이드): 로컬이면 상업자유 Qwen 우선(EXAONE는 비상업/NC라 클라이언트·매출 업무 금지), API면 균형 모델
   */
   NS.WHISPER_BEST = "onnx-community/whisper-large-v3-turbo";
-  NS.KO_OLLAMA_MODEL = "exaone3.5:7.8b";   // 한국어 맥락 강함(LG EXAONE)
+  NS.KO_OLLAMA_MODEL = "qwen2.5:3b";   // 상업자유(Apache-2.0)·빠름. 한국어 품질 더 필요하면 "qwen3:14b"(느림·추론형). ※ exaone3.5:7.8b는 한국어 강하나 비상업(NC)=연구·내부전용만(클라이언트·매출 금지). 모델 카탈로그: D:\AI_Models\LLM_MODELS.md (새 모델 받기 전 먼저 확인)
   NS.KO_API_MODEL = "claude-sonnet-4-6";   // API 백엔드 한국어 생성 기본(균형)
   function pickModel(task, settings) {
     settings = settings || {};
     if (task === "transcribe") return { whisper: NS.WHISPER_BEST, note: "한국어 정확도 최우선" };
     if (task === "ko_generate") {
-      if (settings.backend === "ollama") return { ollama: NS.KO_OLLAMA_MODEL, note: "한국어 맥락엔 EXAONE 권장" };
+      if (settings.backend === "ollama") return { ollama: NS.KO_OLLAMA_MODEL, note: "상업자유 Qwen(클라이언트 업무 가능). EXAONE는 비상업 전용" };
       if (settings.backend === "api") return { api: NS.KO_API_MODEL, note: "균형 모델" };
       return { note: "현재 엔진 사용" };
     }

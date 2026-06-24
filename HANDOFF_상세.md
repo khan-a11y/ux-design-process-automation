@@ -60,7 +60,7 @@
 | 엔진 (`backend`) | 비용 | 설치 | 비전 | 켜는 법 |
 |---|---|---|---|---|
 | 브라우저 내장 AI (`webllm`) | 무료 | 없음 | ✕ | WebGPU 지원 브라우저면 자동. 최초 1회 모델 다운로드. |
-| 로컬 Ollama (`ollama`) | 무료 | 1회 | ✕ | `start-ollama.bat` → 자동 감지. 한국어: `ollama pull exaone3.5:7.8b` |
+| 로컬 Ollama (`ollama`) | 무료 | 1회 | ✕ | `start-ollama.bat` → 자동 감지. 한국어: `ollama pull qwen2.5:3b` |
 | 수동/챗GPT 복붙 (`manual`) | 무료 | 없음 | ○(직접) | 기본값. 프롬프트 창을 챗봇에 복붙 → 답을 다시 붙여넣기. |
 | Anthropic API (`api`) | 유료 | 없음 | ○ | `config.example.js`→`config.js` 복사 후 키 입력. |
 
