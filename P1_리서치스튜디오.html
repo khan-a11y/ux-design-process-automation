@@ -250,17 +250,17 @@ function GatePanel({phase}){
 /* 하단 단계 네비 — 같은 단계 안 탭 이동(이전/다음) + 이전 단계 돌아가기 + 다음 단계로 진행 */
 function StageNav({tab,setTab}){
   const i=TABS.findIndex(t=>t.id===tab);const prevTab=TABS[i-1],nextTab=TABS[i+1];
-  const pi=PROCESS.findIndex(p=>p.id===CURRENT_PHASE);const prevPhase=PROCESS[pi-1],nextPhase=PROCESS[pi+1];
+  const pi=PROCESS.findIndex(p=>p.id===CURRENT_PHASE);const prevPhase=PROCESS[pi-1],nextPhase=PROCESS[pi+1];const curName=(PROCESS[pi]||{}).name||"";
   return <nav className="no-print mx-auto mt-10 mb-36 max-w-[1100px] px-5">
     <div className="rounded-2xl border border-hair bg-white p-4 shadow-soft">
       <div className="mb-3 flex items-center justify-between gap-2">
         <button onClick={()=>prevTab&&setTab(prevTab.id)} disabled={!prevTab} className={cx("inline-flex min-w-0 items-center gap-1.5 rounded-[10px] border border-hair px-3 py-2 text-[13px] font-semibold transition",prevTab?"text-slate-600 hover:bg-slate-50":"cursor-default opacity-40")}>← <span className="truncate">{prevTab?prevTab.label:"이 단계 처음"}</span></button>
-        <div className="shrink-0 text-center text-[12px] text-slate-400">P1 리서치 안에서 <b className="text-brand-hover">{i+1} / {TABS.length}</b></div>
+        <div className="shrink-0 text-center text-[12px] text-slate-400">{CURRENT_PHASE} {curName} 안에서 <b className="text-brand-hover">{i+1} / {TABS.length}</b></div>
         <button onClick={()=>nextTab&&setTab(nextTab.id)} disabled={!nextTab} className={cx("inline-flex min-w-0 items-center gap-1.5 rounded-[10px] border border-hair px-3 py-2 text-[13px] font-semibold transition",nextTab?"text-slate-600 hover:bg-slate-50":"cursor-default opacity-40")}><span className="truncate">{nextTab?nextTab.label:"이 단계 마지막"}</span> →</button>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hair pt-3">
         <a href={prevPhase?("./"+prevPhase.file):"./index.html"} className="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-[13px] font-semibold text-slate-500 hover:bg-slate-100">↩ {prevPhase?(prevPhase.id+" "+prevPhase.name+"로 돌아가기"):"홈 · 프로젝트 정의(P0)"}</a>
-        {nextPhase&&<a href={"./"+nextPhase.file} className="inline-flex items-center gap-2 rounded-[10px] bg-brand px-4 py-2.5 text-[13px] font-bold text-white shadow-sm hover:bg-brand-hover" title="리서치를 마쳤다면 다음 단계로">다음 단계 → {nextPhase.id} {nextPhase.name}</a>}
+        {nextPhase&&<a href={"./"+nextPhase.file} className="inline-flex items-center gap-2 rounded-[10px] bg-brand px-4 py-2.5 text-[13px] font-bold text-white shadow-sm hover:bg-brand-hover" title="이 단계를 마쳤다면 다음 단계로">다음 단계 → {nextPhase.id} {nextPhase.name}</a>}
       </div>
     </div>
   </nav>;

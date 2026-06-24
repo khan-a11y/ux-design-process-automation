@@ -25,7 +25,11 @@
     "P1.survey":     { phase: "P1", phaseName: "리서치", task: "설문 자유응답 분류", next: "P2.affinity", nextLabel: "P2 정의 · 어피니티" },
     "P1.voc":        { phase: "P1", phaseName: "리서치", task: "리뷰·VOC 묶기", next: "P2.hmw", nextLabel: "P2 정의 · HMW" },
     "P1.desk":       { phase: "P1", phaseName: "리서치", task: "데스크 리서치 브리프", next: "P2.hmw", nextLabel: "P2 정의 · HMW" },
-    "P1.guide":      { phase: "P1", phaseName: "리서치", task: "인터뷰 가이드", next: "P1.interview", nextLabel: "P1 인터뷰(이 가이드로 진행 후)" }
+    "P1.guide":      { phase: "P1", phaseName: "리서치", task: "인터뷰 가이드", next: "P1.interview", nextLabel: "P1 인터뷰(이 가이드로 진행 후)" },
+    "P2.affinity":   { phase: "P2", phaseName: "정의", task: "어피니티 클러스터링(관찰 묶기)", next: "P2.hmw", nextLabel: "P2 정의 · HMW" },
+    "P2.journey":    { phase: "P2", phaseName: "정의", task: "사용자 여정맵", next: "P3.idea", nextLabel: "P3 아이디에이션" },
+    "P2.hmw":        { phase: "P2", phaseName: "정의", task: "인사이트 → HMW·POV", next: "P3.idea", nextLabel: "P3 아이디에이션" },
+    "P2.prd":        { phase: "P2", phaseName: "정의", task: "요구사항(PRD) 초안", next: "P3.priority", nextLabel: "P3 우선순위" }
   };
 
   /* ---------- 프로젝트 dossier ---------- */
@@ -113,8 +117,9 @@
       res.inputs = { ok: have.length >= 2 && !!(brief.name && String(brief.name).trim()),
         why: have.length ? ("프로젝트 정의 " + have.length + "/" + need.length + "칸 채움" + (brief.name ? "" : " · 이름 비어 있음")) : "P0 프로젝트 정의가 비어 있어요 — 홈에서 먼저 정의하세요" };
     } else {
-      var prior = Object.keys(slots).length;
-      res.inputs = { ok: prior > 0, why: prior ? (prior + "개 앞 단계 산출물 있음") : "앞 단계 산출물이 없어요" };
+      var curN = parseInt(String(phase).replace(/\D/g, ""), 10) || 0;
+      var priorIds = Object.keys(slots).filter(function (id) { var m = String(id).match(/^P(\d+)\./); return m && parseInt(m[1], 10) < curN; });
+      res.inputs = { ok: priorIds.length > 0, why: priorIds.length ? ("앞 단계 산출물 " + priorIds.length + "개 있음") : "앞 단계(예: P1 리서치) 산출물이 없어요 — 먼저 만들고 오세요" };
     }
     var ps = Object.keys(slots).filter(function (id) { return id.indexOf(phase + ".") === 0; });
     var conf = ps.filter(function (id) { return slots[id].meta && slots[id].meta.human_confirmed; });
