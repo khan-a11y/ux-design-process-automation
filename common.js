@@ -30,7 +30,7 @@
 
   /* ---------- 프로젝트 dossier ---------- */
   function _blankProject() {
-    return { id: _uid("prj"), name: "", type: "", brief: {}, slots: {}, mentorLog: [], createdAt: _now(), updatedAt: _now() };
+    return { id: _uid("prj"), name: "", type: "", brief: {}, slots: {}, gates: {}, mentorLog: [], createdAt: _now(), updatedAt: _now() };
   }
   // 기존 P0 브리프(uxax_project_brief_v1)가 있으면 dossier로 1회 마이그레이션
   function _migrate(p) {
@@ -48,6 +48,7 @@
     var p = _load(PROJECT_KEY, null);
     if (!p) { p = _migrate(_blankProject()); _save(PROJECT_KEY, p); }
     if (!p.slots) p.slots = {};
+    if (!p.gates) p.gates = {};
     if (!p.mentorLog) p.mentorLog = [];
     return p;
   }
@@ -89,6 +90,41 @@
   }
   function getSlot(id) { var p = loadProject(); return p.slots[id] || null; }
   function listSlots() { var p = loadProject(); return p.slots || {}; }
+
+  /* ---------- 판단 게이트(단계 점검) ----------
+     심층리뷰 반영: "이 단계 시작/마무리해도 되나"를 6칸으로 스스로 점검 → 초급자가 판단을 배움.
+     - text 칸(목표/합격선/멈춤): 사람이 적음(게이트 상태에 저장).
+     - auto 칸(입력충족/사람검수/비용·환경): dossier에서 자동 판정 → ✓/⚠ + 이유.
+     gate 상태: dossier.gates[phase] = { goal, passLine, stopWhen, confirmed, at } */
+  NS.GATE_FIELDS = [
+    { key: "goal",     icon: "🎯", label: "이 단계 목표",   kind: "text", help: "여기서 무엇을 만들어 무엇을 얻나? 한 줄. 흐릿하면 결과도 흐릿해져요.", ph: "예: 인터뷰·설문에서 '첫 거래 불안'의 구체 맥락과 빈도를 뽑는다" },
+    { key: "inputs",   icon: "📥", label: "입력 충족",       kind: "auto", help: "이 단계를 시작할 재료(앞 단계 산출물)가 준비됐는지." },
+    { key: "passLine", icon: "✅", label: "합격선(정량)",    kind: "text", help: "무엇이 되면 '제대로 했다'인지 숫자로. 끝을 정해두면 과·미달을 안 함.", ph: "예: 인터뷰 5건 텍스트화 + 주제 6개 이상, 설문 100건 분류 완료" },
+    { key: "stopWhen", icon: "⛔", label: "멈춤 조건",       kind: "text", help: "여기까지 하면 멈추고 다음으로. 끝없이 파지 않게.", ph: "예: 새 인터뷰에서 더 새로운 주제가 안 나오면(포화) 멈춘다" },
+    { key: "humanOk",  icon: "🧑‍⚖️", label: "사람 검수",      kind: "auto", help: "AI 결과를 사람이 한 번 확인했는지. AI는 제안, 결정은 사람." },
+    { key: "costEnv",  icon: "⚙️", label: "비용·환경",       kind: "auto", help: "이 단계 도구가 무료/내 환경에서 도는지." }
+  ];
+  function _filled(obj, keys) { return keys.filter(function (k) { return obj && obj[k] && String(obj[k]).trim(); }); }
+  // 자동 판정 3칸: { inputs:{ok,why}, humanOk:{ok,why}, costEnv:{ok,why} }
+  function deriveGate(phase) {
+    var p = loadProject(), brief = p.brief || {}, slots = p.slots || {}, res = {};
+    if (phase === "P1") {
+      var need = ["name", "oneline", "users", "success"], have = _filled(brief, need);
+      res.inputs = { ok: have.length >= 2 && !!(brief.name && String(brief.name).trim()),
+        why: have.length ? ("프로젝트 정의 " + have.length + "/" + need.length + "칸 채움" + (brief.name ? "" : " · 이름 비어 있음")) : "P0 프로젝트 정의가 비어 있어요 — 홈에서 먼저 정의하세요" };
+    } else {
+      var prior = Object.keys(slots).length;
+      res.inputs = { ok: prior > 0, why: prior ? (prior + "개 앞 단계 산출물 있음") : "앞 단계 산출물이 없어요" };
+    }
+    var ps = Object.keys(slots).filter(function (id) { return id.indexOf(phase + ".") === 0; });
+    var conf = ps.filter(function (id) { return slots[id].meta && slots[id].meta.human_confirmed; });
+    res.humanOk = { ok: ps.length > 0 && conf.length === ps.length,
+      why: ps.length ? (conf.length + "/" + ps.length + "개 산출물 검수됨" + (conf.length === ps.length ? "" : " · 남은 건 '내가 검수함' 표시")) : "아직 만든 산출물이 없어요" };
+    res.costEnv = { ok: true, why: "전부 무료 · 브라우저 안에서 처리(유료 API는 선택 시에만)" };
+    return res;
+  }
+  function getGate(phase) { var p = loadProject(); return (p.gates && p.gates[phase]) || {}; }
+  function setGate(phase, patch) { var p = loadProject(); p.gates = p.gates || {}; p.gates[phase] = Object.assign({}, p.gates[phase], patch, { at: _now() }); saveProject(p); return p.gates[phase]; }
 
   /* ---------- 멘토 학습 로그 ---------- */
   function mentorAdd(page, q, a) {
@@ -190,6 +226,9 @@ ${contexts}`;
   NS.confirmSlot = confirmSlot;
   NS.getSlot = getSlot;
   NS.listSlots = listSlots;
+  NS.getGate = getGate;
+  NS.setGate = setGate;
+  NS.deriveGate = deriveGate;
   NS.mentorAdd = mentorAdd;
   NS.mentorLoad = mentorLoad;
   NS.mentorClear = mentorClear;

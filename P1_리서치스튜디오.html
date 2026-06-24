@@ -201,6 +201,40 @@ function ProcessNav({current}){
     </div>
   </div>;
 }
+/* 판단 게이트 — "이 단계 시작·마무리해도 되나" 6칸 자가점검(초급자 판단 학습). dossier.gates[phase]에 저장 */
+function GatePanel({phase}){
+  const[open,setOpen]=useState(false);const[,force]=useState(0);
+  const g=(window.UXAX&&UXAX.getGate&&UXAX.getGate(phase))||{};
+  const auto=(window.UXAX&&UXAX.deriveGate&&UXAX.deriveGate(phase))||{};
+  const fields=(window.UXAX&&UXAX.GATE_FIELDS)||[];
+  const val=(k)=>g[k]||"";const autoOf=(k)=>auto[k];
+  const setVal=(k,v)=>{if(window.UXAX&&UXAX.setGate)UXAX.setGate(phase,{[k]:v});force(n=>n+1);};
+  const sat=fields.filter(f=>f.kind==="auto"?(autoOf(f.key)&&autoOf(f.key).ok):!!String(val(f.key)).trim()).length;
+  const allOk=fields.length>0&&sat===fields.length;const confirmed=!!g.confirmed;
+  return <div className="mb-5 rounded-2xl border border-hair bg-white shadow-soft">
+    <button onClick={()=>setOpen(o=>!o)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
+      <span className="text-lg">🚦</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2 text-[15px] font-bold text-ink">단계 점검 · 판단 게이트<Chip className={allOk?"bg-emerald-50 text-emerald-600 ring-emerald-100":"bg-amber-50 text-amber-600 ring-amber-100"}>{allOk?"준비 완료":"점검 "+sat+"/"+fields.length}</Chip>{confirmed&&<Chip className="bg-brand-light text-brand-hover ring-brand/20">✓ 마무리 점검됨</Chip>}</div>
+        <div className="text-[12.5px] text-slate-400">이 단계를 <b>시작·마무리해도 되는지</b> 6칸으로 스스로 점검 — “무엇을 어디까지” 판단하는 법을 배워요.</div>
+      </div>
+      <span className="shrink-0 text-[13px] text-slate-400">{open?"접기 ▲":"펼치기 ▼"}</span>
+    </button>
+    {open&&<div className="border-t border-hair p-4">
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        {fields.map(f=>{const a=autoOf(f.key);return <div key={f.key} className={cx("rounded-xl border p-3",f.kind==="auto"?(a&&a.ok?"border-emerald-100 bg-emerald-50/40":"border-amber-100 bg-amber-50/40"):"border-hair bg-white")}>
+          <div className="flex items-center gap-1.5 text-[13px] font-bold text-ink"><span>{f.icon}</span><span>{f.label}</span>{f.kind==="auto"&&<span className={cx("ml-auto text-[12px] font-bold",a&&a.ok?"text-emerald-600":"text-amber-600")}>{a&&a.ok?"✓ 충족":"⚠ 확인"}</span>}</div>
+          <div className="mt-0.5 text-[12px] leading-relaxed text-slate-500">{f.help}</div>
+          {f.kind==="auto"?<div className={cx("mt-1.5 text-[12.5px] font-medium",a&&a.ok?"text-emerald-700":"text-amber-700")}>{a?a.why:""}</div>:<textarea value={val(f.key)} onChange={e=>setVal(f.key,e.target.value)} placeholder={f.ph} rows={2} className={cx(inputCls,"mt-1.5 resize-y text-[13px]")}/>}
+        </div>;})}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-[12.5px] text-slate-500">{allOk?"6칸 모두 충족 — 자신 있게 진행하거나 다음 단계로 넘어가도 좋아요.":"빈 칸·⚠ 항목을 채우면 더 단단해져요. (강제는 아니에요 — 판단을 돕는 체크리스트)"}</div>
+        <Btn size="sm" variant={confirmed?"ghost":"soft"} onClick={()=>{if(window.UXAX&&UXAX.setGate)UXAX.setGate(phase,{confirmed:!confirmed});force(n=>n+1);}}>{confirmed?"✓ 마무리 점검 해제":"이 단계 마무리 점검 통과로 표시"}</Btn>
+      </div>
+    </div>}
+  </div>;
+}
 /* 하단 단계 네비 — 같은 단계 안 탭 이동(이전/다음) + 이전 단계 돌아가기 + 다음 단계로 진행 */
 function StageNav({tab,setTab}){
   const i=TABS.findIndex(t=>t.id===tab);const prevTab=TABS[i-1],nextTab=TABS[i+1];
@@ -790,6 +824,7 @@ function App(){
       <div className="mx-auto max-w-[1100px] overflow-x-auto px-3"><nav className="flex gap-1">{TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} className={cx("flex items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition",tab===t.id?"border-brand text-brand-hover":"border-transparent text-slate-500 hover:text-ink")}>{t.label}<span className="text-[11px] text-slate-400">{t.pid}</span></button>)}</nav></div>
     </header>
     <main className="mx-auto max-w-[1100px] px-5 py-7">
+      <GatePanel phase={CURRENT_PHASE}/>
       <div className={tab==="interview"?"":"hidden"}><InterviewPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
       <div className={tab==="survey"?"":"hidden"}><SurveyPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
       <div className={tab==="voc"?"":"hidden"}><VocPanel settings={settings} openSettings={openSettings} toast={toastFn}/></div>
