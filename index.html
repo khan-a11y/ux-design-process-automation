@@ -187,6 +187,8 @@ PHASES.forEach(ph=>{
 
   function render(){
     const fs=fieldsFor(state.type), name=state.data.name||"";
+    const _ns=NS(); const lastEdited=(_ns&&_ns.loadProject&&(_ns.loadProject().updatedAt||""))||"";
+    const hasData=Object.keys(state.data||{}).some(k=>String(state.data[k]||"").trim());
     const typeBtns=TYPES.map(t=>{const on=state.type===t.id;return '<button data-type="'+t.id+'" class="rounded-xl border px-3 py-2 text-left transition '+(on?"text-white":"bg-white text-slate-700 hover:border-slate-300")+'" style="'+(on?("background:"+ACCENT+";border-color:"+ACCENT):"border-color:#e3e3ec")+'"><span class="text-[14px] font-bold">'+t.icon+" "+t.label+'</span><div class="text-[11px] '+(on?"text-white/80":"text-slate-400")+'">'+t.desc+'</div></button>';}).join("");
     const fieldCells=fs.map(f=>{
       const v=esc(state.data[f.key]||"");
@@ -200,6 +202,10 @@ PHASES.forEach(ph=>{
         '<div><div class="flex items-center gap-2"><span class="rounded-full bg-[#eef0fb] px-2.5 py-1 text-[12px] font-bold text-[#4f5bd5]">P0 · 시작점</span><h2 class="text-lg font-bold text-slate-900">프로젝트 정의</h2></div>'+
         '<p class="mt-1.5 max-w-[680px] text-[13px] leading-relaxed text-slate-500">리서치(P1)를 시작하기 전에 <b>무엇을·누구를 위해·왜</b> 하는지 한 페이지에 정합니다. 여기서 정한 내용은 <b>리서치(P1) 첫 화면에 자동으로 채워지고</b>, 이후 모든 단계가 맥락으로 가져다 씁니다.</p></div>'+
         '<div class="flex items-center gap-3 text-[12px]"><button id="p0-ex" class="font-semibold text-[#4f5bd5]">▶ 예시로 한 번에 채우기</button><button id="p0-reset" class="text-slate-400 hover:text-slate-600">처음부터</button></div>'+
+      '</div>'+
+      '<div class="mt-3 rounded-xl border px-3.5 py-2.5 text-[12.5px] leading-relaxed text-slate-600" style="border-color:#dfe3fb;background:#f4f5fd">'+
+        '<b class="text-[#4f5bd5]">🌱 정의는 살아있어요</b> — 처음부터 완벽하지 않아도 됩니다. 리서치(P1)를 하다 새로 알게 되면 <b>언제든 여기로 돌아와</b> 고치세요. 그게 정상적인 UX 과정이에요.'+
+        (hasData&&lastEdited?(' <span class="text-slate-400">· 마지막 수정 '+esc(lastEdited)+'</span>'):'')+
       '</div>'+
       '<div class="mt-4 text-[13px] font-semibold text-slate-800">어떤 종류의 일인가요? <span class="font-normal text-slate-400">(고르면 맞춤 질문 1개가 더해져요)</span></div>'+
       '<div class="mt-2 grid gap-2 sm:grid-cols-3" id="p0-types">'+typeBtns+'</div>'+

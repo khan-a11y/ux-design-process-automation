@@ -207,6 +207,10 @@ function GatePanel({phase}){
   const g=(window.UXAX&&UXAX.getGate&&UXAX.getGate(phase))||{};
   const auto=(window.UXAX&&UXAX.deriveGate&&UXAX.deriveGate(phase))||{};
   const fields=(window.UXAX&&UXAX.GATE_FIELDS)||[];
+  const brief=(window.UXAX&&UXAX.getBrief&&UXAX.getBrief())||{};
+  // P0 정의 → 게이트 연결: 목표는 P0 '한 줄 정의', 합격선은 P0 '성공 기준'에서 가져올 수 있게(프리필).
+  const PREFILL={goal:{src:(brief.oneline||"").trim(),label:"P0 한 줄 정의 가져오기"},passLine:{src:(brief.success||"").trim(),label:"P0 성공 기준 가져오기"}};
+  const hasBrief=!!((brief.oneline||"").trim()||(brief.success||"").trim());
   const val=(k)=>g[k]||"";const autoOf=(k)=>auto[k];
   const setVal=(k,v)=>{if(window.UXAX&&UXAX.setGate)UXAX.setGate(phase,{[k]:v});force(n=>n+1);};
   const sat=fields.filter(f=>f.kind==="auto"?(autoOf(f.key)&&autoOf(f.key).ok):!!String(val(f.key)).trim()).length;
@@ -221,11 +225,19 @@ function GatePanel({phase}){
       <span className="shrink-0 text-[13px] text-slate-400">{open?"접기 ▲":"펼치기 ▼"}</span>
     </button>
     {open&&<div className="border-t border-hair p-4">
+      {hasBrief
+        ? <div className="mb-3 rounded-xl border border-brand/20 bg-brand-faint p-3">
+            <div className="flex flex-wrap items-center gap-1.5 text-[12.5px] font-bold text-brand-hover">🧭 이 프로젝트의 북극성<span className="font-normal text-slate-400">— 프로젝트 정의(P0)에서 정함</span></div>
+            {(brief.oneline||"").trim()&&<div className="mt-1 text-[12.5px] leading-relaxed text-slate-600"><b className="text-ink">한 줄 정의</b> · {brief.oneline}</div>}
+            {(brief.success||"").trim()&&<div className="mt-0.5 text-[12.5px] leading-relaxed text-slate-600"><b className="text-ink">성공 기준</b> · {brief.success}</div>}
+            <div className="mt-1.5 text-[11.5px] leading-relaxed text-slate-400">리서치하며 생각이 바뀌면 <a href="./index.html" className="font-semibold text-brand-hover hover:underline">홈에서 정의를 고치세요 →</a> 정의는 고정이 아니라 같이 자라요.</div>
+          </div>
+        : <div className="mb-3 rounded-xl border border-amber-100 bg-amber-50/50 p-3 text-[12.5px] leading-relaxed text-amber-700">아직 <b>프로젝트 정의(P0)</b>가 비어 있어요 — <a href="./index.html" className="font-semibold underline">홈에서 먼저 정하면</a> 이 단계의 목표·합격선이 또렷해져요.</div>}
       <div className="grid gap-2.5 sm:grid-cols-2">
-        {fields.map(f=>{const a=autoOf(f.key);return <div key={f.key} className={cx("rounded-xl border p-3",f.kind==="auto"?(a&&a.ok?"border-emerald-100 bg-emerald-50/40":"border-amber-100 bg-amber-50/40"):"border-hair bg-white")}>
+        {fields.map(f=>{const a=autoOf(f.key);const pf=PREFILL[f.key];const empty=!String(val(f.key)).trim();return <div key={f.key} className={cx("rounded-xl border p-3",f.kind==="auto"?(a&&a.ok?"border-emerald-100 bg-emerald-50/40":"border-amber-100 bg-amber-50/40"):"border-hair bg-white")}>
           <div className="flex items-center gap-1.5 text-[13px] font-bold text-ink"><span>{f.icon}</span><span>{f.label}</span>{f.kind==="auto"&&<span className={cx("ml-auto text-[12px] font-bold",a&&a.ok?"text-emerald-600":"text-amber-600")}>{a&&a.ok?"✓ 충족":"⚠ 확인"}</span>}</div>
           <div className="mt-0.5 text-[12px] leading-relaxed text-slate-500">{f.help}</div>
-          {f.kind==="auto"?<div className={cx("mt-1.5 text-[12.5px] font-medium",a&&a.ok?"text-emerald-700":"text-amber-700")}>{a?a.why:""}</div>:<textarea value={val(f.key)} onChange={e=>setVal(f.key,e.target.value)} placeholder={f.ph} rows={2} className={cx(inputCls,"mt-1.5 resize-y text-[13px]")}/>}
+          {f.kind==="auto"?<div className={cx("mt-1.5 text-[12.5px] font-medium",a&&a.ok?"text-emerald-700":"text-amber-700")}>{a?a.why:""}</div>:<div className="mt-1.5"><textarea value={val(f.key)} onChange={e=>setVal(f.key,e.target.value)} placeholder={f.ph} rows={2} className={cx(inputCls,"resize-y text-[13px]")}/>{pf&&pf.src&&empty&&<button type="button" onClick={()=>setVal(f.key,pf.src)} className="mt-1 text-[11.5px] font-semibold text-brand-hover hover:underline">↧ {pf.label}</button>}</div>}
         </div>;})}
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
