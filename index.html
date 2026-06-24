@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>UX×AX 자동화 도구 모음</title>
+<title>UX×AX 자동화 교보재 — AI로 UX 자동화가 어디까지 되나</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -23,11 +23,34 @@ window.addEventListener("unhandledrejection",function(e){showErr("오류(promise
     <div class="inline-flex items-center gap-2.5">
       <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#5e6ad2] text-sm font-black text-white">AX</div>
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">UX×AX 자동화 도구 모음</h1>
-        <p class="text-sm text-slate-500">UX 디자인 프로세스 6단계 · 자동화 가능한 부분을 실제로 자동화한 도구들. 전부 무료(브라우저·로컬·복붙).</p>
+        <h1 class="text-2xl font-bold tracking-tight">UX×AX 자동화 교보재</h1>
+        <p class="text-sm text-slate-500">AI로 UX 디자인 프로세스를 <b>어디까지 자동화할 수 있나</b> — 6단계 29개 과제를 실제로 만들어 본 데모·학습자료. 전부 무료(브라우저·로컬·복붙).</p>
       </div>
     </div>
   </header>
+
+  <!-- ===== 교보재 안내 + 신뢰 범례 ===== -->
+  <section class="mb-10 rounded-2xl border bg-white p-5 shadow-[0_1px_2px_rgba(16,16,26,.04)]" style="border-color:#e9e9ef">
+    <div class="flex items-center gap-2">
+      <span class="rounded-full bg-[#eef0fb] px-2.5 py-1 text-[12px] font-bold text-[#4f5bd5]">📚 교보재</span>
+      <span class="text-[15px] font-bold text-ink">이건 "AI로 UX 자동화가 어디까지 되나"를 직접 만들어 본 학습자료입니다</span>
+    </div>
+    <p class="mt-2 text-[13.5px] leading-relaxed text-slate-600">UX 표준 6단계의 자동화 과제 29개를 전부 무료로 구현해, <b>AI가 진짜 해내는 부분</b>과 <b>아직 사람 검수가 필요한 부분</b>의 경계를 눈으로 보여줍니다. 완성된 단일 제품이라기보다, 각 단계에서 자동화가 어디까지 닿는지 확인하는 <b>데모 모음</b>입니다. 실무에 바로 쓰는 "흐름 도구"는 별도 프로젝트(<code class="rounded bg-slate-100 px-1 text-[12px]">260617_UX디자인프로세스_도구</code>)에서 P1~P2에 집중해 따로 만듭니다.</p>
+    <div class="mt-3 grid gap-2 sm:grid-cols-3">
+      <div class="rounded-xl border px-3 py-2.5" style="border-color:#e3e3ec">
+        <div class="text-[13px] font-bold text-ink">🔢 코드 실집계</div>
+        <div class="mt-0.5 text-[12px] leading-relaxed text-slate-500">숫자·계산을 브라우저 코드가 직접 함(전사·통계·색대비·픽셀 diff·군집·차트). <b>AI 안 거침 → 신뢰 높음.</b></div>
+      </div>
+      <div class="rounded-xl border px-3 py-2.5" style="border-color:#e3e3ec">
+        <div class="text-[13px] font-bold text-ink">⚗️ 혼합</div>
+        <div class="mt-0.5 text-[12px] leading-relaxed text-slate-500">코드가 계산하고 AI가 해석·라벨링. <b>숫자는 믿고, 문장은 검수.</b></div>
+      </div>
+      <div class="rounded-xl border px-3 py-2.5" style="border-color:#e3e3ec">
+        <div class="text-[13px] font-bold text-ink">✨ AI 생성</div>
+        <div class="mt-0.5 text-[12px] leading-relaxed text-slate-500">LLM이 글·분류·아이디어를 생성·추측. <b>틀릴 수 있어 반드시 검수 필요.</b></div>
+      </div>
+    </div>
+  </section>
 
   <!-- ===== P0 · 프로젝트 정의 (리서치 시작 전 단계) ===== -->
   <section id="p0" class="mb-12 rounded-2xl border bg-white p-5 shadow-[0_1px_2px_rgba(16,16,26,.04)]" style="border-color:#5e6ad244">
@@ -39,7 +62,7 @@ window.addEventListener("unhandledrejection",function(e){showErr("오류(promise
   <div id="studios" class="mb-12 grid gap-3 md:grid-cols-2 xl:grid-cols-3"></div>
 
   <h2 class="mb-1 text-lg font-bold text-ink">단계별 29개 도구 전체 (P1→P6)</h2>
-  <p class="mb-4 text-[13px] text-slate-500">UX 표준 프로세스 순서로 본 전체 목록. 각 카드는 해당 도구가 들어 있는 스튜디오의 탭으로 바로 엽니다.</p>
+  <p class="mb-4 text-[13px] text-slate-500">UX 표준 프로세스 순서로 본 전체 목록. 각 카드 아래 칩(🔢/⚗️/✨)은 <b>그 도구가 AI에 얼마나 의존하는지</b>를 보여줍니다 — 교보재의 핵심 관전 포인트. 각 카드는 해당 도구가 들어 있는 스튜디오의 탭으로 바로 엽니다.</p>
   <div id="grid" class="space-y-9"></div>
 
   <div class="mt-12 rounded-2xl border border-[#5e6ad2]/30 bg-[#f6f7fd] p-5">
@@ -48,7 +71,7 @@ window.addEventListener("unhandledrejection",function(e){showErr("오류(promise
     <a id="persona-link" href="../260618_퍼소나_스튜디오/v0.2/persona-studio.html" target="_blank" class="mt-3 inline-flex rounded-[10px] bg-[#5e6ad2] px-4 py-2.5 text-sm font-semibold text-white">↗ 퍼소나 스튜디오 열기</a>
   </div>
 
-  <footer class="mt-10 text-center text-[13px] text-slate-400">한 번에 하나씩, 자동화 깊이 우선으로 제작 중 · 완료된 도구부터 바로 사용하세요.</footer>
+  <footer class="mt-10 text-center text-[13px] text-slate-400">교보재 · AI로 UX 자동화가 어디까지 되는지 보여주는 데모 모음 · DIR4 AI Lab · v1.8 · 제작일 2026-06-25</footer>
 </div>
 
 <script>window.UXAX_CONFIG=window.UXAX_CONFIG||{};</script>
@@ -111,6 +134,16 @@ const PHASES=[
   ]},
 ];
 const BADGE={done:["완료","bg-emerald-100 text-emerald-700"],next:["제작 예정(다음)","bg-amber-100 text-amber-700"],plan:["계획","bg-slate-100 text-slate-500"],studio:["퍼소나 스튜디오","bg-[#eef0fb] text-[#4f5bd5]"]};
+/* 신뢰 범례: 각 도구의 핵심 처리 방식 — 코드 실집계(calc)/혼합(mix)/AI 생성(ai). 교보재 핵심: AI가 어디까지 진짜 하나 */
+const CKIND={calc:["🔢 코드 실집계","bg-sky-50 text-sky-700 border border-sky-200"],mix:["⚗️ 혼합","bg-violet-50 text-violet-700 border border-violet-200"],ai:["✨ AI 생성","bg-amber-50 text-amber-700 border border-amber-200"]};
+const COMPUTE_OF={
+  "P1-A1":"mix","P1-A2":"mix","P1-A3":"mix","P1-A4":"mix","P1-A5":"ai",
+  "P2-A1":"mix","P2-A3":"mix","P2-A4":"ai","P2-A5":"ai",
+  "P3-A1":"ai","P3-A2":"mix","P3-A3":"mix","P3-A4":"calc",
+  "P4-A1":"mix","P4-A2":"calc","P4-A3":"mix","P4-A4":"calc","P4-A5":"mix",
+  "P5-A1":"ai","P5-A2":"calc","P5-A3":"mix","P5-A4":"calc",
+  "P6-A1":"ai","P6-A2":"mix","P6-A3":"calc","P6-A4":"calc","P6-A5":"mix",
+};
 const grid=document.getElementById("grid");
 PHASES.forEach(ph=>{
   const sec=document.createElement("section");
@@ -125,9 +158,11 @@ PHASES.forEach(ph=>{
     if(clickable){el.href="./"+t.file;}
     el.className="rounded-2xl border border-hair bg-white p-4 shadow-[0_1px_2px_rgba(16,16,26,.04)] "+(clickable?"transition hover:shadow-[0_8px_40px_rgba(16,16,26,.12)] cursor-pointer":"opacity-80");
     el.style.borderColor="#e9e9ef";
+    const ck=COMPUTE_OF[t.id]; const [ckLabel,ckCls]=ck?CKIND[ck]:["",""];
     el.innerHTML=`<div class="flex items-center justify-between gap-2"><span class="text-[12px] font-bold text-slate-400">${t.id}</span><span class="rounded-full px-2 py-0.5 text-[11px] font-semibold ${cls}">${label}</span></div>
       <div class="mt-1.5 text-[15px] font-bold text-ink">${t.name}</div>
       <div class="mt-1 text-[13px] text-slate-500">⚙ ${t.auto}</div>
+      ${ck?`<div class="mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${ckCls}">${ckLabel}</div>`:''}
       ${clickable?'<div class="mt-2 text-[13px] font-semibold text-[#4f5bd5]">열기 →</div>':''}`;
     wrap.appendChild(el);
   });
