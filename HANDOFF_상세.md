@@ -1,16 +1,13 @@
 # HANDOFF (상세·영구) — UX×AX 자동화 도구 모음
 
-`v1.53 · 제작일 2026-06-18(코드)·정리 2026-06-19 · 작성: DIR4 AI Lab · 문서 ID UXAX-STUDIO-2026`
+`v1.6 · 제작일 2026-06-24 · 정리 2026-06-24 · 작성: DIR4 AI Lab · 문서 ID UXAX-STUDIO-2026`
 
-> **■ 지금 진행 중 — [P1 기준 모델 재설계 라운드] Step 0~3 완료 (v1.53).** 단계 로드맵 [PLAN.md](PLAN.md), 상세 플랜 `~/.claude/plans/transient-skipping-emerson.md`.
-> 사용자 P1 전수 피드백 → **방향 전환:** "기능 패널 7묶음" → **초급자가 리더 없이 따라가며 배우는 자기설명형 흐름 도구.** 판단 4축: ①자기설명성(여기서 뭘 해서 뭘 얻나 1줄+쉬운 용어) ②흐름·적응성("스튜디오 메뉴" 지양·필요한 단계만) ③따라다니는 학습 멘토 ④통합 템플릿 데이터(dossier 슬롯).
-> **이번 라운드 완료분:**
-> - **Step 0 · 기반:** `common.js` 신규 — 7파일 컴포넌트 복제 drift 방지 위해 평문 공통로직을 **`window.UXAX` 네임스페이스**로 추출(기존 전역명 재선언 금지). **프로젝트 dossier 데이터모델** `localStorage["uxax_project_v1"]`(brief+slots+mentorLog) + 작업별 모델 라우팅 `UXAX.pickModel`(전사=large-v3-turbo, 한국어생성=EXAONE 우선).
-> - **Step 1 · index P0:** 7스텝 위저드 → **한 페이지 폼**(유형 항상 노출 → ‘이전 못 감’ 해소·예시 일괄·필드별 의도 크기·자동높이·dossier.brief 저장). P1 인터뷰 ‘리서치 맥락’ 자동 프리필 호환.
-> - **Step 2 · P1 공통:** `Guide` → ‘🎯 이 도구로: … 1줄 + [📖 사용방법] 모달’. **플로팅 학습 멘토** `MentorFab`(우하단 따라다님·탭별 추천질문 즉답·자유질문 AI·Q&A를 `mentorLog`에 저장→‘내 질문’ 복습).
-> - **Step 3 · P1 인터뷰:** 모델 기본 **turbo**·오디오 기본플레이어 `controlsList="nodownload noplaybackrate"`(⋮ 중복 제거)·‘⬇ 다운로드’ 라벨·🗑 삭제·**추정 % 진행바**(원형 스피너 대체)·드래그 active·**클로바식 결과**(화자 색블록·타임스탬프·문장 textarea·상단 액션바)·`P1.interview` 슬롯 저장.
-> **⚠ 미완·주의:** **Step 4~6 미완**(설문·VOC·데스크·가이드 재설계 + 보관함 템플릿 뷰·단계 네비·smoke 재실행). **이번 재설계는 P1 인터뷰 탭 위주 — P1 나머지 탭·P2~P7 미확산.** 브라우저 무료 한국어 전사는 구조적 한계(정확도 필요 시 clova·Purfview 로컬 후 ‘붙여넣기’). large-v3-turbo 한국어 실품질 **실오디오 미검증**.
-> **이전 이력 압축:** v1.4 index P0 신규 → v1.41 P0 고도화·P1 자동프리필 → v1.42 퍼소나 링크 경로 정정 / (그 전) v1.2 학습레이어 7앱 확산+연동, v1.3 전사품질·인터뷰 1차 개편. → §11.
+> **■ 진행 중 — [통합 로드맵 6단계 / 심층리뷰 반영].** 로드맵 SSOT = [PLAN.md](PLAN.md). (구 플랜 `~/.claude/plans/transient-skipping-emerson.md`는 1단계로 흡수됨 — 참고만.)
+> 방향: "기능 패널 7묶음" → **초급자가 리더 없이 따라가며 배우는 자기설명형 흐름 도구.** 판단 4축: ①자기설명성(뭘 해서 뭘 얻나 1줄+쉬운 용어) ②흐름·적응성 ③따라다니는 학습 멘토 ④통합 템플릿 데이터(dossier 슬롯).
+> - **✅ 1단계 완료 (v1.5~v1.57) — P1 신뢰 기반:** `common.js`(`window.UXAX`: dossier/slot/mentor/모델라우팅/**프롬프트 중앙화**) + **슬롯 근거메타**(`source_type·human_confirmed·used_in_phase`) + P0 한 페이지 폼 + **P1 5탭 전부 자기설명형 재설계**(인터뷰 클로바식·설문 자유응답 분류·VOC·데스크·가이드) + 결과 슬롯 저장·**사람 검수 토글** + **보관함 = 단계별 템플릿 뷰** + **하단 단계 네비 `StageNav`**.
+> - **🔵 2단계 진행 (v1.6~) — 판단 게이트:** 각 단계 상단 **6칸 자가점검** `GatePanel`(목표·입력충족·합격선·멈춤·사람검수·비용환경 / auto 3 + 사람입력 3 / 마무리 점검 토글) + common.js `gates`·`deriveGate`·`GATE_FIELDS`. **현재 P1 파일럿만.** 다음 = P0 합격선·재방문 루프.
+> - **🌐 외부 리뷰 라이브:** https://khan-a11y.github.io/ux-design-process-automation/ (GitHub `khan-a11y/ux-design-process-automation`, main 푸시마다 자동 재빌드 · `config.js` 시크릿 제외).
+> **⚠ 미확산(중요):** 1·2단계 산출(자기설명·슬롯·검수·보관함뷰·StageNav·게이트)은 **P1 파일에만** 적용 — **P2~P7 확산은 3단계.** `SLOT_REGISTRY`도 P0·P1만 등록됨. 브라우저 무료 한국어 전사는 구조적 한계(정확도 필요 시 clova·Purfview 로컬 후 ‘붙여넣기’), large-v3-turbo 한국어 실품질 **실오디오 미검증**.
 
 > **이 문서가 무엇인가 / [HANDOFF.md](HANDOFF.md)와의 차이 (꼭 읽을 것)**
 > - **이 파일(`HANDOFF_상세.md`) = 손으로 관리하는 영구 인계 문서.** 자동 훅이 안 건드림. 인수자/AI가 맥락을 잃지 않도록 구조·내부동작·확장법·한계를 정리. → **인계는 여기부터 읽기.**
@@ -24,8 +21,8 @@
 - **무엇:** UX 표준 6단계(P1 리서치 → P6 핸드오프) + P7 운영의 **자동화 과제 29개**를, 흩어진 프롬프트 카드가 아니라 **연계성으로 묶은 7개 스튜디오 앱**으로 실제 자동화한 도구 모음. 전부 **무료·무빌드·단일 HTML**.
 - **차별점:** "프롬프트 칸"이 아님. LLM 호출 주변의 실제 작업(전사·임베딩 군집·PDF 추출·A/B 통계·색대비·픽셀 diff·z-score)을 **브라우저 안에서 코드로** 처리하고, LLM은 파이프라인의 **한 단계**(요약·분류·라벨·해석)만 담당.
 - **시작점:** [index.html](index.html) 더블클릭(허브) → **P0 프로젝트 정의(한 페이지)** → 스튜디오 선택.
-- **상태:** **v1.53** — P1 기준 모델 재설계 라운드 Step 0~3 완료(공통 `common.js`+dossier·P0 폼·플로팅 멘토·인터뷰 클로바식). 스모크 28/28(2026-06-17 기준 · P1 내부 변경 후 Step 6에서 재실행 예정). 정본 폴더 = **`260617_UX디자인프로세스_자동화`**.
-- **인수자가 먼저 할 일:** ① 진행 플랜 `~/.claude/plans/transient-skipping-emerson.md` + [PLAN.md](PLAN.md) ‘다음 작업 체크리스트’ 읽기(다음 = **Step 4 설문 탭**) → ② **`common.js`의 `window.UXAX`(dossier/slot/mentor)** 가 새 공통 기반(§4.4) → ③ [index.html](index.html)·P1 열어 P0 폼·플로팅 멘토 확인 → ④ 엔진 설정(⚙️) 무료 1개(§3) → ⑤ 수정 후 `bash smoke-test.sh`.
+- **상태:** **v1.6** — 1단계 완료(P1 5탭 자기설명형·슬롯·검수·보관함 템플릿 뷰·StageNav) + 2단계 판단 게이트 P1 파일럿. 스모크 **28/28 (2026-06-24 재실행)**. 라이브: khan-a11y.github.io/ux-design-process-automation. 정본 폴더 = **`260617_UX디자인프로세스_자동화`**.
+- **인수자가 먼저 할 일:** ① [PLAN.md](PLAN.md) ‘현재 위치’ 읽기(다음 = **2단계 P0 합격선·재방문 루프**) → ② **`common.js`의 `window.UXAX`(dossier/slot/mentor/**gates**)** 가 공통 기반(§4.4) → ③ [P1_리서치스튜디오.html](P1_리서치스튜디오.html) 열어 상단 🚦게이트·하단 StageNav·우하단 📋보관함(슬롯 템플릿 뷰) 확인 → ④ 엔진 설정(⚙️) 무료 1개(§3) → ⑤ 수정 후 `bash smoke-test.sh`. ⚠ 1·2단계는 **P1 전용** — P2~P7은 아직 구버전(3단계에서 확산).
 
 ---
 
@@ -36,7 +33,7 @@
 ├─ index.html                     ← 허브(시작점). P0 프로젝트 정의 폼 + 7 스튜디오 카드 + 29 도구 그리드
 ├─ common.js                       ← ★공통 평문 로직(window.UXAX): dossier/slot/mentor/모델라우팅. babel보다 먼저 로드
 ├─ CLAUDE.md                       ← 이 프로젝트 지침(전역·상위 상속 + 고유 맥락·제약)
-├─ P1_리서치스튜디오.html          ← 전사·요약 / 설문코딩 / VOC / 데스크리서치 / 인터뷰가이드 (재설계 라운드 진행중)
+├─ P1_리서치스튜디오.html          ← 전사·요약 / 설문 자유응답 분류 / VOC / 데스크 / 인터뷰가이드 (★1·2단계 재설계 적용 = 자기설명·슬롯·검수·StageNav·게이트. P2~P7은 아직 구버전)
 ├─ P2_정의스튜디오.html            ← 어피니티 / 여정맵 / HMW / PRD   (+퍼소나 앱으로 링크)
 ├─ P3_아이디에이션스튜디오.html     ← 발산 / IA / 플로우 / 우선순위
 ├─ P4_콘텐츠스튜디오.html          ← UX라이팅 / 현지화 / 더미콘텐츠
@@ -103,9 +100,11 @@
 
 ### 4.4 localStorage 키 맵
 - `uxax_studio_settings_v1` — **엔진 설정**(backend·apiKey·model·ollama·webllm). 7앱 공유. `SETTINGS_KEY`.
-- `uxax_project_v1` — **★프로젝트 한 권(dossier, v1.5 신규)**. `{id,name,type,brief,slots:{"P1.interview":{data,md,meta}…},mentorLog}`. `common.js`의 `window.UXAX` API로만 접근(`loadProject/setBrief/getBrief/setSlot/getSlot/mentorAdd/mentorLoad/pickModel`). 슬롯 레지스트리 `UXAX.SLOT_REGISTRY`(슬롯→단계명·작업·다음단계).
+- `uxax_project_v1` — **★프로젝트 한 권(dossier)**. `{id,name,type,brief,slots:{"P1.interview":{status,data,md,meta}…},gates:{"P1":{goal,passLine,stopWhen,confirmed,at}},mentorLog}`. `window.UXAX` API로만 접근(`loadProject/setBrief/getBrief/setSlot/confirmSlot/getSlot/listSlots/getGate/setGate/deriveGate/mentorAdd/mentorLoad/pickModel`). 슬롯 레지스트리 `UXAX.SLOT_REGISTRY`(P0·P1만 등록), 게이트 스펙 `UXAX.GATE_FIELDS`(6칸).
+  - **슬롯 meta = 근거추적(1-0):** `source_id·source_type·confidence·human_confirmed·used_in_phase`(+model·items·at). `confirmSlot(id,on)`이 `human_confirmed` 토글(AI 제안→사람 결정).
+  - **게이트(2단계):** `deriveGate(phase)`가 자동 3칸 판정(입력충족=P0 브리프 채움 / 사람검수=해당 단계 슬롯 `human_confirmed` 비율 / 비용·환경). 사람입력 3칸(목표·합격선·멈춤)은 `gates[phase]`에 저장.
 - `uxax_project_brief_v1` — 구 P0 위저드 데이터(레거시). `common.js`가 dossier로 1회 마이그레이션. P1 인터뷰 자동 프리필이 아직 이 키도 읽음(공존).
-- `uxax_workspace_v1` — **공유 보관함(Workspace, 레거시)**. 평문 MD 배열, 7앱 공유. `WS_KEY`. 최대 300건. (Step 6에서 dossier 슬롯 기반 ‘템플릿 뷰’로 대체 예정 — 현재 공존.)
+- `uxax_workspace_v1` — **공유 보관함(평문 MD 배열, 레거시)**. `WS_KEY`. 최대 300건. **(1-3)** 보관함 UI는 dossier 슬롯 기반 ‘단계별 템플릿 뷰’가 메인이 됨 — 이 평문 배열은 ‘기타 메모’ 탭으로 공존.
 - 각 도구 입력/결과도 `load/save` 헬퍼로 도구별 키(JSON). 모두 **브라우저 localStorage에만**, 서버 없음.
 
 ### 4.5 공유 보관함(Workspace) API — 앱 간 산출물 전달
@@ -115,7 +114,7 @@
 
 ### 4.6 공통 UI/컴포넌트
 - 디자인 토큰(Tailwind config): brand `#5e6ad2`, ink `#16161a`, canvas `#fbfbfd`, hair `#e9e9ef`. **라이트 모드 기본.**
-- 공통 컴포넌트(JSX라 7파일 복제·표준화): `Btn`, `Tabs`(URL 해시 연동), `WsSave`/`WsPull`/`WorkspaceFab`, 설정 모달. **(v1.5+ P1)** `Guide`=‘🎯 1줄 + [📖 사용방법] 모달’, `MentorFab`=플로팅 학습 멘토(`FAQ_BY_TAB` 추천질문·`SPK_PALETTE` 화자색·`mentorLog` 저장), `AudioCard`(controlsList 중복제거·라벨 다운로드·🗑).
+- 공통 컴포넌트(JSX라 7파일 복제·표준화): `Btn`, `Tabs`(URL 해시 연동), `WsSave`/`WsPull`/`WorkspaceFab`, 설정 모달. **(P1 전용·1·2단계 산출)** `Guide`=‘🎯 1줄 + [📖 사용방법] 모달’, `MentorFab`=플로팅 학습 멘토(`FAQ_BY_TAB`·`mentorLog` 저장), `AudioCard`(controlsList 중복제거·🗑), **`WorkspaceModal`=보관함 단계별 슬롯 템플릿 뷰**(`SlotStatusBadge` 검수 뱃지·편집/복사/검수토글·빈슬롯 플레이스홀더·‘기타 메모’ 탭), **`StageNav`**=하단 단계 네비(이전/다음 탭·이전 단계 홈·다음 단계 P2), **`GatePanel`**=판단 게이트 6칸(상단 접이식, `GATE_FIELDS`·`deriveGate` 사용).
 - **`common.js`(평문, `window.UXAX`)** = dossier/slot/mentor/모델라우팅. babel 스크립트보다 먼저 `<script src>`. ★주의: babel 파일의 기존 전역명(`WS_KEY`·`load`·`MODELS` 등)과 충돌 금지 → 전부 `UXAX.*`로만 노출(const 중복선언 시 SyntaxError로 전체 깨짐).
 - 유틸: `cx` `S` `arr` `uid` `load/save` `copyText` `download` `parseJsonLoose` `parseCSV/toCSV` `fmtTime/parseTime` `audioDuration`(전사 진행 추정용).
 
@@ -183,7 +182,7 @@
 - **무설치:** `bash smoke-test.sh` — 헤드리스 Chrome으로 index + 7앱의 **28개 탭**을 열어 `#root` 실제 렌더(빈 화면/초기화 오류) 자동 검사. 종료코드 0=통과. Chrome 경로 자동탐지(안 되면 `CHROME=… bash smoke-test.sh`).
 - **Playwright:** `npm run test:install` 후 `npm test`.
 - **판정 로직:** 스크립트 소스 제거 후 실제 렌더 텍스트 길이<400자 또는 "초기화 오류"/"불러오는 중" 잔존 → FAIL.
-- **현재:** 28/28 PASS (2026-06-17 재실행 확인).
+- **현재:** 28/28 PASS (2026-06-24 재실행 확인). + 변경 탭은 Playwright로 실클릭·콘솔·스크린샷 실검증(헤드리스 dump-dom 추측 금지). ⚠ Playwright에서 `goto(#해시)`는 해시만 바뀌면 리로드 안 함 → 탭 전환은 **탭 버튼 클릭**으로(과거 프로브 오진 원인).
 
 ---
 
@@ -198,13 +197,13 @@
 
 ---
 
-## 9. 다음 선택지 (백로그)
+## 9. 다음 선택지 (백로그 / 로드맵 SSOT=[PLAN.md](PLAN.md))
 
-- 보관함 산출물에 **출처 태그/단계 메타**를 붙여 단계 간 추적성 강화.
-- 도구별 결과를 한 번에 모아 **프로젝트 리포트(MD/PDF)** 로 내보내는 통합 export.
-- 퍼소나 스튜디오와의 양방향 연동(P2 정의 결과 → 퍼소나 입력).
-- 디자이너용 입문 덱(별도 `04` 프로덕트)과의 학습 동선 연결.
-- (있다면) GitHub 저장소 연결 + `config.js` 시크릿 분리 점검.
+- **2단계 잔여:** P0 합격선·재방문 루프(브리프 성공기준 ↔ 게이트 합격선 연결, 리서치하며 정의로 되돌아오는 동선).
+- **3단계:** 1·2단계 산출(자기설명·슬롯·검수·보관함뷰·StageNav·**게이트**)을 **P2~P7로 확산** + 의사결정 구조화 + **방법론 인터랙션 레이어**(어피니티 보드 등) + `SLOT_REGISTRY` P2~P7 등록.
+- **4단계:** 검증 루프(P5→P6→P7→P3 순환). **5단계:** 평가 체계(골든셋 eval)·접근성 점검·세션 스냅샷. **6단계:** index 적응형 흐름 + 자동화(마지막).
+- (완료됨) ~~보관함 출처 태그/단계 메타~~ → 슬롯 근거메타(1-0)·템플릿 뷰(1-3)로 반영. GitHub 공개 레포 + Pages 라이브 연결됨.
+- (상시) 통합 프로젝트 리포트(MD/PDF) export, 퍼소나 스튜디오 양방향 연동, 입문 덱 학습 동선 연결.
 
 ---
 
@@ -218,7 +217,9 @@
 
 ## 11. 변경 이력 / 세션 히스토리 요약
 
-- **2026-06-18~19 (v1.5~v1.53) [P1 기준 모델 재설계 라운드]:** 사용자 P1 전수 피드백으로 방향 전환(자기설명·흐름·멘토·통합 템플릿 4축). **Step 0** common.js(`window.UXAX`)+dossier(`uxax_project_v1`)+모델라우팅 / **Step 1** index P0 7스텝→한 페이지 폼(v1.5, 레이아웃 v1.51) / **Step 2** Guide→사용방법 모달+플로팅 학습 멘토(v1.52) / **Step 3** 인터뷰 탭 turbo기본·오디오 중복제거·추정 진행바·클로바식 결과(v1.53). 각 Playwright e2e·콘솔0. **남음 Step 4~6.** 상세 플랜 `~/.claude/plans/transient-skipping-emerson.md`.
+- **2026-06-24 (v1.6) [2단계 시작]:** **판단 게이트** 도입 — common.js `gates`/`getGate`/`setGate`/`deriveGate`/`GATE_FIELDS` + P1 `GatePanel` 6칸(목표·입력충족·합격선·멈춤·사람검수·비용환경 / auto 3 + 사람입력 3 / 마무리 점검 토글). 초급자 판단 학습용·강제 아님. smoke 28/28 + Playwright + 스크린샷. **P1 파일럿만 — P2~P7 확산은 3단계.** 다음 = P0 합격선·재방문.
+- **2026-06-21~24 (v1.54~v1.57) [1단계 완료]:** 심층리뷰 반영 통합 로드맵으로 정리. **1-0** 슬롯 근거메타(`human_confirmed` 등)+프롬프트 중앙화(`UXAX.PROMPTS`, 7파일 드리프트 방지) / **1-1** 설문 탭 자기설명형(용어 순화·전건 미리보기·CSV·슬롯·검수) / **1-2** VOC·데스크·가이드(슬롯·검수·데스크 예제 누적·top-K/[S1] 설명·모델 추천·가이드 예제 풀) / **1-3** 보관함=단계별 슬롯 템플릿 뷰(근거메타·검수뱃지·편집/복사·빈슬롯 플레이스홀더·메모 분리) + 하단 `StageNav`(이전/다음 탭·이전 단계 홈·다음 단계 P2). 외부 리뷰용 GitHub 공개 레포 + Pages 라이브. 각 smoke 28/28 + Playwright + 스크린샷.
+- **2026-06-18~19 (v1.5~v1.53) [P1 재설계 Step 0~3]:** 사용자 P1 전수 피드백으로 방향 전환(자기설명·흐름·멘토·통합 템플릿 4축). **Step 0** common.js(`window.UXAX`)+dossier+모델라우팅 / **Step 1** index P0 7스텝→한 페이지 폼(v1.5·레이아웃 v1.51) / **Step 2** Guide→사용방법 모달+플로팅 학습 멘토(v1.52) / **Step 3** 인터뷰 탭 turbo기본·오디오 중복제거·추정 진행바·클로바식 결과(v1.53). 각 Playwright e2e·콘솔0.
 - **2026-06-18 (v1.4~v1.42):** index에 **P0 ‘프로젝트 정의’ 단계 신규**(v1.4, 유형별 브리프) → **P0 고도화·P1 ‘리서치 맥락’ 자동 프리필 연동**(v1.41) → 퍼소나 앱 `88_네이버_퍼소나`→`260618_퍼소나_스튜디오` 리네임에 따른 **링크 경로 정정**(v1.42, 야간 검수 발견).
 - **2026-06-18 (v1.3):** 사용자 피드백 반영 — 전사 품질 수정(q8·반복방지·모델 small/large-v3-turbo) + **P1 인터뷰 탭 대개편**(멀티 업로드·파일별 플레이어·모델 선택 전사 비교·2단·‘텍스트화’ 용어·zoom 1.2·Guide 접힘). Qwen3-TTS/Voicebox(둘 다 TTS라 전사 아님)·Qwen3-ASR(서버/API 필요)·Purfview standalone(로컬 exe) 조사 후 “브라우저 무료 한국어 전사는 한계 → 붙여넣기 권장” 결론. Playwright 9/9. **P1만 적용 — 확산 미완.**
 - **2026-06-17 (v1.2):** 초급자 **학습 레이어 7개 앱 전체 확산** + 단계 간 연동 동선(P5→P6·P6↔P7·P7→P3 순환) 완성. 진행 중 **Babel automatic-runtime 렌더 깨짐**(7개 전체 스피너 무한)을 발견해 `Babel.registerPreset`으로 classic runtime 강제해 수정(v1.11). Playwright 기능검증을 앱별 통과·보관함 7앱 공유 end-to-end·smoke 28/28 확인. 버전 흐름: v1.1 학습레이어 도입 → v1.11 babel 수정 → v1.12 P1 완성 → v1.2 7앱 확산. 다음: 실무 MVP 고도화(Phase 5).
