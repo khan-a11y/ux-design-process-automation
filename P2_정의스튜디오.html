@@ -19,7 +19,7 @@
   }}};
 </script>
 <style>
-  html{font-size:16px}body{background:#fbfbfd;color:#16161a;-webkit-font-smoothing:antialiased}
+  html{font-size:16px}body{background:#fbfbfd;color:#16161a;-webkit-font-smoothing:antialiased;zoom:1.2}
   ::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:#d7d7e0;border-radius:8px;border:3px solid #fbfbfd}
   .fade-in{animation:fadeIn .22s ease both}@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}@keyframes spin{to{transform:rotate(360deg)}}
 </style>
@@ -226,7 +226,31 @@ const HMW_FAQ=[{q:"HMW가 뭐예요?",a:"How Might We, ‘어떻게 하면 ~할 
 const DEMO_PRD={problem:"신규 사용자의 첫 거래 전환율이 낮음(신뢰·안전 불안)",goals:"첫 거래 전환율을 분기 내 +15%",constraints:"2주 스프린트, 외부 결제 연동 변경 불가"};
 const PRD_FAQ=[{q:"PRD가 뭐예요?",a:"Product Requirements Document, 무엇을 왜 만들지 적은 제품 요구사항 문서예요."},{q:"AC(수용 기준)가 뭐예요?",a:"‘이 조건을 만족하면 완성’이라고 정한 기준이에요. Given-When-Then 형식이라 그대로 테스트 케이스가 돼요."}];
 
-function Guide({what,where,why,prep,inputs,steps,tips,note,defaultOpen}){const[open,setOpen]=useState(defaultOpen);const Sec=({icon,title,children})=><div><div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-brand-hover">{icon} {title}</div><div className="text-[14px] leading-relaxed text-slate-600">{children}</div></div>;return <div className="mb-5 overflow-hidden rounded-2xl border border-brand/20 bg-brand-faint"><button className="flex w-full items-center justify-between px-5 py-3 text-left" onClick={()=>setOpen(o=>!o)}><span className="flex items-center gap-2 text-[14px] font-bold text-brand-hover">📖 사용법 · 학습 가이드</span><span className="text-brand-hover">{open?"▲":"▼"}</span></button>{open&&<div className="space-y-4 border-t border-brand/15 px-5 py-4">{what&&<Sec icon="📘" title="무엇을 하나">{what}</Sec>}{where&&<Sec icon="🧭" title="프로세스에서 위치">{where}</Sec>}{why&&<Sec icon="💡" title="왜 중요한가">{why}</Sec>}{prep&&<Sec icon="📎" title="준비물">{prep}</Sec>}{inputs&&<Sec icon="✍️" title="입력 가이드 — 이렇게 넣어야 잘 나와요"><ul className="space-y-2">{inputs.map((x,i)=><li key={i}><b className="text-ink">{x.field}</b> — {x.desc}{x.ex&&<div className="mt-0.5 rounded bg-white/70 px-2 py-1 text-[12px] text-slate-500">예) {x.ex}</div>}</li>)}</ul></Sec>}{steps&&<Sec icon="🪜" title="사용 단계"><ol className="space-y-1.5">{steps.map((s,i)=><li key={i} className="flex gap-2"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">{i+1}</span><span><b className="text-ink">{s.t}</b> — {s.d}</span></li>)}</ol></Sec>}{tips&&<Sec icon="⚠️" title="팁 · 주의"><ul className="ml-4 list-disc space-y-1 text-[13px]">{tips.map((t,i)=><li key={i}>{t}</li>)}</ul></Sec>}{note&&<div className="rounded-lg bg-amber-50 px-3 py-2 text-[13px] text-amber-800">💡 {note}</div>}</div>}</div>;}
+function Guide({what,where,why,prep,inputs,steps,tips,note,defaultOpen}){
+  const[open,setOpen]=useState(false);
+  const Sec=({icon,title,children})=><div><div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-brand-hover">{icon} {title}</div><div className="text-[14px] leading-relaxed text-slate-600">{children}</div></div>;
+  const hasDetail=where||why||prep||inputs||steps||tips||note;
+  return <React.Fragment>
+    <div className="mb-5 flex items-start gap-3 rounded-2xl border border-brand/20 bg-brand-faint px-4 py-3">
+      <span className="mt-0.5 shrink-0 text-lg">🎯</span>
+      <div className="flex-1 text-[14px] leading-relaxed text-slate-700"><b className="text-brand-hover">이 도구로:</b> {what}</div>
+      {hasDetail&&<button onClick={()=>setOpen(true)} className="shrink-0 self-center rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-brand-hover ring-1 ring-brand/30 transition hover:bg-brand hover:text-white" title="이 도구 자세한 사용방법">📖 사용방법</button>}
+    </div>
+    {open&&<div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4" onClick={()=>setOpen(false)}><Card className="max-h-[88vh] w-full max-w-xl overflow-y-auto p-6 shadow-pop fade-in"><div onClick={e=>e.stopPropagation()}>
+      <div className="mb-4 flex items-center justify-between"><h3 className="text-lg font-bold text-ink">📖 사용방법 · 학습 가이드</h3><button className="text-slate-400 hover:text-ink" onClick={()=>setOpen(false)}>✕</button></div>
+      <div className="space-y-4">
+        {what&&<Sec icon="📘" title="무엇을 하나">{what}</Sec>}
+        {where&&<Sec icon="🧭" title="프로세스에서 위치">{where}</Sec>}
+        {why&&<Sec icon="💡" title="왜 중요한가">{why}</Sec>}
+        {prep&&<Sec icon="📎" title="준비물">{prep}</Sec>}
+        {inputs&&<Sec icon="✍️" title="입력 가이드 — 이렇게 넣어야 잘 나와요"><ul className="space-y-2">{inputs.map((x,i)=><li key={i}><b className="text-ink">{x.field}</b> — {x.desc}{x.ex&&<div className="mt-0.5 rounded bg-slate-50 px-2 py-1 text-[12px] text-slate-500">예) {x.ex}</div>}</li>)}</ul></Sec>}
+        {steps&&<Sec icon="🪜" title="사용 단계"><ol className="space-y-1.5">{steps.map((s,i)=><li key={i} className="flex gap-2"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">{i+1}</span><span><b className="text-ink">{s.t}</b> — {s.d}</span></li>)}</ol></Sec>}
+        {tips&&<Sec icon="⚠️" title="팁 · 주의"><ul className="ml-4 list-disc space-y-1 text-[13px]">{tips.map((t,i)=><li key={i}>{t}</li>)}</ul></Sec>}
+        {note&&<div className="rounded-lg bg-amber-50 px-3 py-2 text-[13px] text-amber-800">💡 {note}</div>}
+      </div>
+    </div></Card></div>}
+  </React.Fragment>;
+}
 function ProgressOverlay({state,title,emoji}){if(!state.active)return null;const pct=Math.round((state.progress||0)*100);return <div className="fixed inset-0 z-[85] flex items-center justify-center bg-ink/50 p-4"><Card className="w-full max-w-md p-6 text-center shadow-pop fade-in"><div className="mb-3 text-3xl">{emoji}</div><div className="text-base font-bold text-ink">{title}</div><div className="mt-1 text-[13px] text-slate-500">최초 1회만 모델을 받고 이후엔 캐시에서 즉시 실행됩니다.</div><div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand transition-all" style={{width:pct+"%"}}/></div><div className="mt-2 truncate text-[12px] text-slate-400">{state.text||(pct+"%")}</div></Card></div>;}
 function ManualModal({req,queueCount,onSubmit,onCancel}){const[answer,setAnswer]=useState("");const[copied,setCopied]=useState(false);useEffect(()=>{setAnswer("");setCopied(false)},[req&&req.id]);if(!req)return null;const copy=async()=>{await copyText(req.promptText);setCopied(true);setTimeout(()=>setCopied(false),1500)};return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4"><Card className="flex max-h-[90vh] w-full max-w-2xl flex-col shadow-pop fade-in"><div className="flex items-center justify-between border-b border-hair px-5 py-4"><div><h3 className="text-base font-bold text-ink">✍️ 수동 모드</h3><p className="text-[13px] text-slate-400">{req.meta?.who?req.meta.who+" · ":""}복사 → 챗봇 → 답 붙여넣기</p></div>{queueCount>1&&<Chip>대기 {queueCount}</Chip>}</div><div className="flex-1 overflow-y-auto px-5 py-4"><div className="mb-2 flex gap-2"><Btn size="sm" onClick={copy}>{copied?"✓ 복사됨":"📋 복사"}</Btn><Btn size="sm" variant="outline" onClick={()=>{copy();window.open("https://chatgpt.com/","_blank")}}>↗ ChatGPT</Btn><Btn size="sm" variant="outline" onClick={()=>{copy();window.open("https://claude.ai/","_blank")}}>↗ Claude</Btn></div><pre className="max-h-44 overflow-y-auto whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600">{req.promptText}</pre><textarea value={answer} onChange={e=>setAnswer(e.target.value)} rows={8} autoFocus className={cx(inputCls,"mt-3 resize-y")} placeholder="답변(JSON 포함) 붙여넣기…"/></div><div className="flex justify-end gap-2 border-t border-hair px-5 py-3"><Btn variant="ghost" onClick={onCancel}>취소</Btn><Btn onClick={()=>onSubmit(answer)} disabled={!answer.trim()}>답변 사용</Btn></div></Card></div>;}
 const BACKENDS=[{id:"webllm",label:"🌐 브라우저 내장 AI",desc:"무료·WebGPU"},{id:"ollama",label:"🖥️ 로컬 Ollama",desc:"무료·내 PC"},{id:"manual",label:"✍️ 수동/챗GPT",desc:"무료·복붙"},{id:"api",label:"☁️ Anthropic API",desc:"유료·빠름"}];
@@ -425,6 +449,51 @@ function PrdPanel({settings,openSettings,toast}){
 
 /* ===== Root ===== */
 const TABS=[{id:"affinity",label:"① 어피니티 클러스터링",pid:"P2-A1"},{id:"journey",label:"② 사용자 여정맵",pid:"P2-A3"},{id:"hmw",label:"③ 인사이트→HMW",pid:"P2-A4"},{id:"prd",label:"④ 요구사항(PRD)",pid:"P2-A5"}];
+/* 플로팅 학습 멘토 — 따라다니며 탭별 추천질문(FAQ 즉답·무료) + 자유질문(AI) + Q&A 학습저장(모아보기) */
+const FAQ_BY_TAB={affinity:AFFINITY_FAQ,journey:JOURNEY_FAQ,hmw:HMW_FAQ,prd:PRD_FAQ};
+const tabLabel=(id)=>{const t=(typeof TABS!=="undefined"?TABS:[]).find(x=>x.id===id);return t?t.label:id;};
+function MentorFab({tab,settings,openSettings,toast}){
+  const[open,setOpen]=useState(false);const[view,setView]=useState("ask");
+  const[thread,setThread]=useState([]);const[q,setQ]=useState("");const[busy,setBusy]=useState(false);const[,f]=useState(0);
+  const hasNS=!!(window.UXAX&&UXAX.mentorAdd);
+  const log=hasNS?UXAX.mentorLoad():[];
+  const answer=async(text)=>{
+    const qq=(text!==undefined?text:q||"").trim();if(!qq||busy)return;setQ("");
+    const faq=(FAQ_BY_TAB[tab]||[]).find(x=>x.q===qq||qq.indexOf(x.q.replace(/[?]/g,""))>=0);
+    if(faq){setThread(t=>[...t,{q:qq,a:faq.a}]);if(hasNS)UXAX.mentorAdd(tab,qq,faq.a);return;}
+    if(!backendReady(settings)){toast&&toast("error","AI 엔진을 먼저 설정하세요(⚙)");openSettings&&openSettings();return;}
+    setBusy(true);setThread(t=>[...t,{q:qq,a:"…"}]);
+    try{const out=await runLLM(settings,{system:"당신은 UX 프로세스를 가르치는 친절한 시니어 멘토입니다. UX·개발을 잘 모르는 초급 디자이너에게 전문용어는 풀어서, 쉬운 한국어로 3~5문장으로 답합니다.",messages:[{role:"user",content:"["+tabLabel(tab)+"] "+qq}],maxTokens:500,meta:{who:"학습 멘토"}});const a=out||"(답이 비었어요)";setThread(t=>{const c=[...t];c[c.length-1]={q:qq,a};return c;});if(hasNS)UXAX.mentorAdd(tab,qq,a);}
+    catch(e){setThread(t=>{const c=[...t];c[c.length-1]={q:qq,a:"실패: "+(e.message||e)};return c;});}
+    finally{setBusy(false);}
+  };
+  return <React.Fragment>
+    <button onClick={()=>setOpen(o=>!o)} className="no-print fixed bottom-[4.75rem] right-5 z-[60] flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-bold text-brand-hover shadow-pop ring-1 ring-brand/30 hover:bg-brand-light" title="학습 멘토 — 모르는 건 바로 물어보세요">🎓 학습 멘토{log.length?(" "+log.length):""}</button>
+    {open&&<div className="no-print fixed bottom-5 right-5 z-[70] flex max-h-[78vh] w-[370px] max-w-[92vw] flex-col rounded-2xl border border-hair bg-white shadow-pop fade-in">
+      <div className="flex items-center justify-between border-b border-hair px-4 py-3">
+        <div className="text-[14px] font-bold text-ink">🎓 학습 멘토</div>
+        <div className="flex items-center gap-1">
+          <button onClick={()=>setView(view==="ask"?"history":"ask")} className="rounded-full px-2 py-1 text-[12px] font-semibold text-slate-500 hover:bg-slate-100">{view==="ask"?("📚 내 질문"+(log.length?(" "+log.length):"")):"← 질문하기"}</button>
+          <button onClick={()=>setOpen(false)} className="rounded-full px-2 py-1 text-slate-400 hover:bg-slate-100">✕</button>
+        </div>
+      </div>
+      {view==="ask"?<React.Fragment>
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+          <div className="text-[12px] text-slate-400">지금 화면(<b className="text-slate-500">{tabLabel(tab)}</b>)에서 많이 묻는 것 — 눌러보세요:</div>
+          <div className="flex flex-wrap gap-1.5">{(FAQ_BY_TAB[tab]||[]).map((x,i)=><button key={i} onClick={()=>answer(x.q)} className="rounded-full bg-brand-faint px-2.5 py-1 text-[12px] font-semibold text-brand-hover hover:bg-brand-light">{x.q}</button>)}</div>
+          {thread.map((m,i)=><div key={i} className="space-y-1">
+            <div className="ml-auto w-fit max-w-[85%] rounded-2xl bg-brand px-3 py-2 text-[13px] text-white">{m.q}</div>
+            <div className="w-fit max-w-[92%] rounded-2xl bg-slate-100 px-3 py-2 text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap">{m.a==="…"?<Spinner size={14}/>:m.a}</div>
+          </div>)}
+        </div>
+        <div className="border-t border-hair p-3"><div className="flex gap-1.5"><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")answer();}} placeholder="궁금한 걸 입력…" className={cx(inputVisual,"min-w-0 flex-1 py-1.5 text-[13px]")}/><Btn size="sm" onClick={()=>answer()} disabled={busy}>{busy?<Spinner size={12}/>:"보내기"}</Btn></div><div className="mt-1.5 text-[11px] text-slate-400">물어본 건 ‘내 질문’에 모여서 나중에 복습할 수 있어요.</div></div>
+      </React.Fragment>:<div className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
+        {!log.length?<p className="rounded-xl bg-slate-50 p-3 text-[13px] text-slate-500">아직 질문 기록이 없어요. 모르는 걸 물어보면 여기 모여서 나중에 복습할 수 있어요.</p>:log.map(m=><div key={m.id} className="rounded-xl border border-hair p-2.5"><div className="text-[11px] text-slate-400">{tabLabel(m.page)} · {m.at}</div><div className="mt-0.5 text-[13px] font-semibold text-ink">Q. {m.q}</div><div className="mt-0.5 whitespace-pre-wrap text-[12.5px] leading-relaxed text-slate-600">{m.a}</div></div>)}
+        {!!log.length&&<button onClick={()=>{if(confirm("질문 기록을 모두 지울까요?")){UXAX.mentorClear();f(n=>n+1);}}} className="text-[12px] text-slate-400 hover:text-rose-500">기록 비우기</button>}
+      </div>}
+    </div>}
+  </React.Fragment>;
+}
 function App(){
   const[settings,setSettings]=useState(()=>{const s=load(SETTINGS_KEY,null);const fc=(window.UXAX_CONFIG&&window.UXAX_CONFIG.anthropicApiKey)||"";const def={backend:fc?"api":"manual",apiKey:fc,model:MODELS[0].id,ollamaUrl:"http://127.0.0.1:11434",ollamaModel:"",webllmModel:WEBLLM_PREFERRED[0]};return s?{...def,...s}:def;});
   const[tab,setTab]=useState(()=>{const h=(location.hash||"").replace("#","");return TABS.find(t=>t.id===h)?h:"affinity";});
@@ -454,6 +523,7 @@ function App(){
     <ProgressOverlay state={embLoader} title="임베딩 모델 준비 중" emoji="🧮"/>
     <ProgressOverlay state={webllmLoader} title="브라우저 내장 AI 준비 중" emoji="🌐"/>
     <WorkspaceFab toast={toastFn}/>
+    <MentorFab tab={tab} settings={settings} openSettings={openSettings} toast={toastFn}/>
     <Toast toast={toast}/>
   </div>;
 }
