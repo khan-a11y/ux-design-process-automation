@@ -114,15 +114,17 @@ async function transcribeFile(file,modelId,language,onPhase){onPhase&&onPhase("�
 function audioDuration(url){return new Promise(res=>{try{const a=new Audio();a.preload="metadata";a.onloadedmetadata=()=>res(a.duration||0);a.onerror=()=>res(0);a.src=url;setTimeout(()=>res(a.duration||0),4000);}catch(e){res(0);}});}
 /* 로컬 SenseVoice 서버(D:\\AI_Models\\asr\\server.py, localhost:11435)로 전사. Ollama와 동일한 로컬 fetch 패턴. 브라우저 whisper보다 정확·빠름(GPU), 업로드 없음. */
 async function transcribeViaServer(file,language,onPhase){
-  onPhase&&onPhase("로컬 SenseVoice 서버로 전송 중…");
+  onPhase&&onPhase("🖥️ 로컬 서버로 전송 중…");
   const langMap={korean:"ko",english:"en",japanese:"ja",auto:"auto"};
   const fd=new FormData();fd.append("audio",file);fd.append("lang",langMap[language]||"auto");
+  onPhase&&onPhase("🖥️ 서버에서 전사 중… (GPU)");
   let res;
   try{res=await fetch("http://127.0.0.1:11435/transcribe",{method:"POST",body:fd});}
   catch(e){throw new Error("로컬 ASR 서버에 연결하지 못했어요 — D:\\AI_Models\\asr\\start-asr.bat 를 먼저 실행하세요.");}
   if(!res.ok)throw new Error("로컬 서버 오류 "+res.status);
   const d=await res.json();if(d.error)throw new Error(d.error);
-  const text=(d.text||"").trim();
+  onPhase&&onPhase("정리 중…");
+  const text=(d.text||"").replace(/[ \t]{2,}/g," ").trim();
   const parts=text.replace(/([.!?。！？…])\s+/g,"$1\n").split(/\n+/).map(s=>s.trim()).filter(Boolean);
   const chunks=(parts.length?parts:[text]).map(t=>({id:uid("s"),start:0,end:0,text:t,speaker:"화자 1"}));
   return {chunks,duration:0};
@@ -452,7 +454,7 @@ function InterviewPanel({settings,openSettings,toast}){
     setSummary(null);setRawSummary("");setSttBusy(true);setSttPhase("준비 중…");setSttProg(0);
     const t0=performance.now();
     let dur=0; try{dur=await audioDuration(f.url);}catch(e){}
-    const est=Math.max(5,(dur||30)*(hasWebGPU()?0.9:2.6)); // 추정 총 소요(초) — 정확 ETA는 라이브러리 미제공
+    const est=whisperModel==="__local_sensevoice__"?Math.max(3,(dur||30)*0.4):Math.max(5,(dur||30)*(hasWebGPU()?0.9:2.6)); // 서버(GPU)는 더 빠름 반영 · 정확 ETA는 미제공
     const timer=setInterval(()=>{const el=(performance.now()-t0)/1000;setSttProg(Math.min(0.96,el/est));},250);
     try{const res=whisperModel==="__local_sensevoice__"?await transcribeViaServer(f.file,language,(p)=>setSttPhase(p)):await transcribeFile(f.file,whisperModel,language,(p)=>setSttPhase(p));setSegments(res.chunks);setTransMeta({name:f.name,model:(WHISPER_MODELS.find(m=>m.id===whisperModel)||{}).label||whisperModel,ms:Math.round(performance.now()-t0)});setCurUrl(f.url);setSttProg(1);toast("ok","텍스트화 완료 · "+res.chunks.length+"구간");}
     catch(e){toast("error","텍스트화 실패: "+(e.message||e));setSttPhase("");}
@@ -707,7 +709,7 @@ function DeskPanel({settings,openSettings,toast}){
   const[sources,setSources]=useState(sv.sources||[]);const[question,setQuestion]=useState(sv.question||"");const[topK,setTopK]=useState(sv.topK||10);const[result,setResult]=useState(sv.result||null);const[busy,setBusy]=useState(false);const[phase,setPhase]=useState("");const[confirmed,setConfirmed]=useState(()=>{try{var s=window.UXAX&&UXAX.getSlot&&UXAX.getSlot("P1.desk");return !!(s&&s.meta&&s.meta.human_confirmed);}catch(e){return false;}});
   useEffect(()=>{save(K,{sources,question,topK,result})},[sources,question,topK,result]);
   const addPdf=async(files)=>{setBusy(true);for(const f of files){if(!f)continue;try{setPhase("PDF 추출: "+f.name);const txt=await extractPdfText(f,()=>{});if(txt.length<20){toast("error",f.name+": 텍스트가 거의 없어요(스캔 PDF는 추출 불가)");continue;}setSources(s=>[...s,{id:uid("src"),name:f.name,text:txt}]);toast("ok",f.name+" 추출 완료 ("+txt.length+"자)");}catch(e){toast("error",f.name+" 추출 실패: "+(e.message||e));}}setBusy(false);setPhase("");};
-  const addImageOcr=async(files)=>{setBusy(true);for(const f of files){if(!f)continue;try{setPhase("이미지 OCR(로컬 Donut): "+f.name);const fd=new FormData();fd.append("image",f);let res;try{res=await fetch("http://127.0.0.1:11435/ocr",{method:"POST",body:fd});}catch(e){throw new Error("로컬 서버 미실행 — D:\\AI_Models\\asr\\start-asr.bat 를 켜세요");}if(!res.ok)throw new Error("서버 오류 "+res.status);const d=await res.json();if(d.error)throw new Error(d.error);const txt=(d.text||"").trim();if(!txt){toast("error",f.name+": 추출된 텍스트 없음");continue;}setSources(s=>[...s,{id:uid("src"),name:f.name+" (OCR)",text:txt}]);toast("ok",f.name+" OCR 완료 ("+txt.length+"자)");}catch(e){toast("error",f.name+" OCR 실패: "+(e.message||e));}}setBusy(false);setPhase("");};
+  const addImageOcr=async(files)=>{setBusy(true);for(const f of files){if(!f)continue;try{setPhase("이미지 OCR(로컬 Donut): "+f.name);const fd=new FormData();fd.append("image",f);let res;try{res=await fetch("http://127.0.0.1:11435/ocr",{method:"POST",body:fd});}catch(e){throw new Error("로컬 서버 미실행 — D:\\AI_Models\\asr\\start-asr.bat 를 켜세요");}if(!res.ok)throw new Error("서버 오류 "+res.status);const d=await res.json();if(d.error)throw new Error(d.error);const txt=(d.text||"").replace(/\s{2,}/g," ").trim();if(!txt){toast("error",f.name+": 추출된 텍스트 없음");continue;}setSources(s=>[...s,{id:uid("src"),name:f.name+" (OCR)",text:txt}]);toast("ok",f.name+" OCR 완료 ("+txt.length+"자)");}catch(e){toast("error",f.name+" OCR 실패: "+(e.message||e));}}setBusy(false);setPhase("");};
   const addText=()=>{const name=prompt("출처 이름(예: 2024 시장보고서)");if(name==null)return;setSources(s=>[...s,{id:uid("src"),name:name||("출처 "+(s.length+1)),text:""}]);};
   const setSrc=(id,k,v)=>setSources(s=>s.map(x=>x.id===id?{...x,[k]:v}:x));
   const delSrc=(id)=>setSources(s=>s.filter(x=>x.id!==id));
