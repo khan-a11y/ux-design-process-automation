@@ -1,6 +1,8 @@
 # HANDOFF (상세·영구) — UX×AX 자동화 도구 모음
 
-`v1.8 · 제작일 2026-06-25 · 작성: DIR4 AI Lab · 문서 ID UXAX-STUDIO-2026`
+`v1.9 · 제작일 2026-07-01 · 작성: DIR4 AI Lab · 문서 ID UXAX-STUDIO-2026`
+
+> **★ v1.9 (2026-07-01) — 로컬 AI 연계(무료 전문도구 병행) 추가 · 최신.** 경쟁 벤치마킹(20+ 도구, `benchmark/` + Artifact) 결과 = "전 과정 통합 + 무료 + 로컬 + 교육형"이 빈 칸이고 각 단계는 전문도구가 더 깊음 → **약한 단계를 무료·오픈소스 전문도구와 병행.** 새 로컬 AI 백엔드 **`D:\AI_Models\asr`**(프로젝트 밖·GPU): **SenseVoice 음성전사 + Donut 문서OCR + kiwi 한국어 띄어쓰기 + pyannote 화자분리**, flask 서버(`localhost:11435`, Ollama식 로컬 fetch)·로그인 자동시작. **P1 인터뷰**(로컬 전사·화자분리)·**P1 데스크**(이미지 OCR)·**P6 사용성**(세션 전사·화자분리)에 연동. 공통 로직 = `common.js`의 `UXAX.asr*`(§4.7). 상세·의존성·검증 = `D:\AI_Models\asr\DIARIZATION_STATUS.md`·`README.md`. **교보재 포지션(v1.8)은 유지 — 이건 실무 기능 강화 레이어.**
 
 > **★ 포지션 전환 (v1.8, 2026-06-25) — 먼저 읽을 것.** UX 전문가 시각 냉정 비판 결과("넓이만·깊이/흐름/데이터연결 없음·누구를 위한 건지 분열") 반영. **이 프로젝트 = "AI로 UX 자동화가 어디까지 되나" 보여주는 교보재/데모로 포지션 확정**(완성 단일 제품 아님). index 허브에 신뢰 범례 3칸 + 29개 도구별 신뢰칩(🔢코드 실집계/⚗️혼합/✨AI 생성) 추가. **실무용 "리더 없이 따라가는 흐름 도구"는 별도 프로젝트로 분기 = `D:\AI_Project\260617_UX디자인프로세스_도구`**(P1~P3 깊게, 현재 v0.41). 아래 "흐름 도구" 방향(4축)은 이제 *그 분기 프로젝트*의 미션 — 이 교보재는 데모로 유지. 보안·검수 통과(`보안검수_2026-06-25.md`).
 > **★ Figma 교보재 장표 (2026-06-25):** `02_DIR4_Team_AI-Lab` 파일 **W25_UX디자인프로세스_자동화_교보재** 페이지에 사용법 46슬라이드(W24 스토리보드 포맷·DT Sans). + W23~W25 전 장표 **본문 배경 #F7E8EF→#E8F7F1(민트)** 재색 + (제목+설명) 그룹→중앙→해제 정렬. 이 장표 규약은 전역 `~/.claude/CLAUDE.md` 장표 섹션에 고정. (W23 아이콘메이커는 다른 포맷이라 제외.)
@@ -50,8 +52,11 @@
 ├─ smoke-test.sh · smoke-test.mjs · package.json  ← 검증(전 탭 헤드리스 렌더)
 ├─ README.md · VERSION.md           ← 사용자 안내 / 버전·변경이력(SSOT)
 ├─ HANDOFF.md (자동) · HANDOFF_상세.md (이 문서)
+├─ benchmark/                      ← ★경쟁 벤치마킹 리포트(Artifact HTML) · 무료 연계 플랜(UPGRADE_PLAN_무료연계.md)
 └─ .claude/handoff-state.json       ← 자동 훅의 세션 누적 사이드카
 ```
+
+- **★로컬 AI 백엔드는 프로젝트 밖:** `D:\AI_Models\asr`(전역 모델 허브) — SenseVoice 전사·Donut OCR·kiwi 띄어쓰기·pyannote 화자분리 + flask 서버(11435)·자동시작(§4.7). git 별개, `hf_token.txt`=HF토큰(시크릿).
 
 - **퍼소나 스튜디오는 이 폴더에 없음.** 별도 앱: `D:\AI_Project\260618_퍼소나_스튜디오\v0.2\persona-studio.html`. P2-A2(페르소나)·P5-A5(가상 사용자 인터뷰)는 그 앱이 전담.
 - **⚠ 경로 함정(v1.42에서 재정정):** index.html·P2의 퍼소나 링크 fallback은 현재 `../260618_퍼소나_스튜디오/v0.2/persona-studio.html`. 이 폴더가 **또 옮겨지면 다시 깨짐** — 항구적 안전책은 `config.js`의 `personaStudioUrl`을 절대경로로 박는 것. (야간 검수가 매일 이 링크 실재 여부를 점검함.)
@@ -122,6 +127,13 @@
 - 공통 컴포넌트(JSX라 7파일 복제·표준화): `Btn`, `Tabs`(URL 해시 연동), `WsSave`/`WsPull`, 설정 모달. **(P1~P7 전체 적용·1·2·3단계 산출)** **`GatePanel`**=판단 게이트 6칸(상단 접이식, P0 북극성 띠+프리필, `GATE_FIELDS`·`deriveGate`), **`StageNav`**=하단 단계 네비(이전/다음 탭·이전 단계·다음 단계, 단계명 동적), **`WorkspaceModal`/`WorkspaceFab`=보관함 단계별 슬롯 템플릿 뷰**(`SlotStatusBadge` 검수 뱃지·편집/복사/검수토글·빈슬롯 플레이스홀더·‘기타 메모’ 탭, 28슬롯), 각 패널 `saveSlot`+`☐ 내가 검수함` 토글. **(P1 전용·미확산)** `MentorFab`=플로팅 학습 멘토(`FAQ_BY_TAB`·`mentorLog`), `Guide` 1줄화, `AudioCard`(controlsList·🗑) — P2~P7은 구형 Guide(필요 시 P급 보강).
 - **`common.js`(평문, `window.UXAX`)** = dossier/slot/mentor/모델라우팅. babel 스크립트보다 먼저 `<script src>`. ★주의: babel 파일의 기존 전역명(`WS_KEY`·`load`·`MODELS` 등)과 충돌 금지 → 전부 `UXAX.*`로만 노출(const 중복선언 시 SyntaxError로 전체 깨짐).
 - 유틸: `cx` `S` `arr` `uid` `load/save` `copyText` `download` `parseJsonLoose` `parseCSV/toCSV` `fmtTime/parseTime` `audioDuration`(전사 진행 추정용).
+
+### 4.7 로컬 AI 서버 연계 (무료 전문도구 병행 · v1.9, 2026-07-01)
+- **위치:** `D:\AI_Models\asr`(프로젝트 밖·전역 모델 허브). flask `server.py` → `http://127.0.0.1:11435`(Ollama식 로컬 fetch·CORS·GPU). 기동 = `start-asr.bat` 또는 로그인 자동시작(`asr-autostart.vbs`, 시작프로그램 등록).
+- **모델(전부 무료·로컬):** ①**SenseVoice**(FunAudioLLM · 음성전사 한/영/중/일… · `lang=ko`면 kiwipiepy로 한국어 띄어쓰기 교정) ②**Donut**(naver-clova-ix · 문서 이미지→텍스트 · 영수증·양식 특화) ③**pyannote**(화자 자동분리 · 별도 격리 `venv-diar311`=Python3.11+torch2.1.2+pyannote3.1.1 · HF 토큰 `hf_token.txt` 필요).
+- **엔드포인트:** `POST /transcribe`(audio,lang,spacing) · `/ocr`(image) · `/diarize`(audio→화자별 세그먼트+전사) · `GET /health`.
+- **도구 연동 API:** `common.js`의 `UXAX.asrTranscribe / asrOcr / asrDiarize / diarToSegments`(7파일 복제 방지). **P1 인터뷰**(전사모델 "🖥️ 로컬 SenseVoice 서버" + "👥 화자 자동 분리")·**P1 데스크**("🖼️ 이미지→텍스트")·**P6 사용성**(녹음 전사 + 화자분리)에서 호출.
+- **주의:** 서버 꺼져 있으면 화면에 `start-asr.bat` 안내. 화자분리는 HF 토큰 1회(발급 + pyannote 2모델 Agree). 첫 실행은 모델 로딩 느림(이후 캐시). pyannote는 메인 GPU 스택(SenseVoice/Donut)과 **별도 venv로 격리** — 과거 pyannote 설치가 메인 torch를 CPU로 오염시킨 사고를 격리로 해결. 상세·의존성·검증·한계 = `D:\AI_Models\asr\DIARIZATION_STATUS.md`.
 
 ---
 
@@ -222,6 +234,7 @@
 
 ## 11. 변경 이력 / 세션 히스토리 요약
 
+- **2026-07-01 (v1.9) [로컬 AI 연계 — 무료 전문도구 병행]:** ① **경쟁 벤치마킹** — 20+ UX 도구(Dovetail·UX Pilot·Maze·Penpot·PostHog·Clarity…) 조사, 29과제×무료 대체도구 매트릭스·포지셔닝맵, 결론="올인원 대체 아닌 학습·프라이버시·초안 허브 + 무료 전문도구 내보내기". 산출물 `benchmark/`(Artifact 리포트 + `UPGRADE_PLAN_무료연계.md`). ② **로컬 AI 백엔드 신설** `D:\AI_Models\asr`(프로젝트 밖·GPU RTX4070Ti·전부 무료): **SenseVoice**(음성전사)·**Donut/naver-clova-ix**(문서 OCR)·**kiwipiepy**(한국어 띄어쓰기 교정)·**pyannote**(화자 자동분리, 별도 venv-diar311·HF토큰). flask `server.py`(localhost:11435, `/transcribe`·`/ocr`·`/diarize`·`/health`, Ollama식 로컬 fetch·CORS)·`start-asr.bat`·로그인 자동시작(`asr-autostart.vbs`). ③ **도구 연동** — `common.js`에 `UXAX.asrTranscribe/asrOcr/asrDiarize/diarToSegments`(7파일 복제 방지). **P1 인터뷰**(전사모델 "🖥️ 로컬 SenseVoice 서버" + "👥 화자 자동 분리")·**P1 데스크**("🖼️ 이미지→텍스트" OCR)·**P6 사용성**(녹음 전사 + 화자분리)에 UI 추가. ④ **검증** — 2화자 오디오 화자 정확 분리(8초 경계)+화자별 전사(`/diarize` 200), P1/P6 Playwright 콘솔0, smoke 계열 유지. 커밋 `f63141f`~`8b5d2fe`. **의존성 삽질**(pyannote가 메인 GPU torch를 CPU로 오염→복구, Windows+py3.12 비호환→Python 3.11 격리 venv, use_auth_token/matplotlib/numpy)은 `D:\AI_Models\asr\DIARIZATION_STATUS.md`에 기록. **교보재 포지션(v1.8) 유지 — 실무 기능 강화 레이어.**
 - **2026-06-24 (v1.72) [3단계 완료]:** P1의 1·2단계 패턴을 **P1~P7 전 스튜디오에 확산.** P2 파일럿(v1.7) 검증 후 P3~P7로 복제(v1.72): 구조 layer(common.js 로드+GatePanel+StageNav+보관함 템플릿뷰)는 node 일괄 변환, 18개 패널 슬롯저장·검수 토글은 병렬 5에이전트. `SLOT_REGISTRY` 28슬롯(P0~P7)·`deriveGate` 앞단계 카운트 일반화. 특이 패널(P5 wire·P6 qa·P7 anomaly) 적응 배선. 각 smoke 28/28 + 소스검증 + Playwright(P5·P7). **중간에 v1.71 로컬 LLM 라이선스 정리**(EXAONE NC→상업자유 Qwen, common.js·7 HTML·bat·문서)를 별도 커밋으로 먼저 확정 후 그 위에 확산.
 - **2026-06-24 (v1.6~v1.61) [2단계 완료]:** **판단 게이트** 도입(v1.6) — common.js `gates`/`getGate`/`setGate`/`deriveGate`/`GATE_FIELDS` + `GatePanel` 6칸(목표·입력충족·합격선·멈춤·사람검수·비용환경 / auto 3 + 사람입력 3 / 마무리 토글), 강제 아님. **P0 합격선·재방문 루프**(v1.61) — 게이트 상단 P0 북극성 띠(한 줄 정의·성공 기준)+목표/합격선 ↧ P0 프리필+index P0 "🌱 정의는 살아있어요" 띠. P1 파일럿 후 3단계에서 전 파일 확산. smoke 28/28 + Playwright + 스크린샷.
 - **2026-06-21~24 (v1.54~v1.57) [1단계 완료]:** 심층리뷰 반영 통합 로드맵으로 정리. **1-0** 슬롯 근거메타(`human_confirmed` 등)+프롬프트 중앙화(`UXAX.PROMPTS`, 7파일 드리프트 방지) / **1-1** 설문 탭 자기설명형(용어 순화·전건 미리보기·CSV·슬롯·검수) / **1-2** VOC·데스크·가이드(슬롯·검수·데스크 예제 누적·top-K/[S1] 설명·모델 추천·가이드 예제 풀) / **1-3** 보관함=단계별 슬롯 템플릿 뷰(근거메타·검수뱃지·편집/복사·빈슬롯 플레이스홀더·메모 분리) + 하단 `StageNav`(이전/다음 탭·이전 단계 홈·다음 단계 P2). 외부 리뷰용 GitHub 공개 레포 + Pages 라이브. 각 smoke 28/28 + Playwright + 스크린샷.
