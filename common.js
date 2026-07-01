@@ -270,6 +270,27 @@ ${contexts}`;
     var d = await res.json(); if (d.error) throw new Error(d.error);
     return (d.text || "").replace(/\s{2,}/g, " ").trim();
   };
+  // 화자 자동 분리(pyannote) + 구간별 SenseVoice 전사. HF 토큰 필요(server가 안내).
+  // 반환: [{speaker:"SPEAKER_00", start, end, text}] — 실패 시 throw(에러 메시지에 토큰 안내 포함될 수 있음).
+  NS.asrDiarize = async function (file, lang, onPhase) {
+    onPhase && onPhase("🖥️ 화자 분리 중… (처음엔 모델 로딩으로 좀 걸려요)");
+    var fd = new FormData(); fd.append("audio", file); fd.append("lang", _ASR_LANG[lang] || lang || "auto");
+    var res;
+    try { res = await fetch(NS.ASR_URL + "/diarize", { method: "POST", body: fd }); }
+    catch (e) { throw new Error("로컬 서버에 연결하지 못했어요 — D:\\AI_Models\\asr\\start-asr.bat 를 켜세요."); }
+    var d = await res.json();
+    if (!res.ok || d.error) throw new Error(d.error || ("로컬 서버 오류 " + res.status));
+    return d.segments || [];
+  };
+  // 화자 라벨(SPEAKER_00…)을 "화자 1/2…"로 매핑해 세그먼트 배열로. (P1 인터뷰·P6 사용성 공용)
+  NS.diarToSegments = function (segs) {
+    var map = {}, n = 0;
+    return (segs || []).map(function (s) {
+      if (!(s.speaker in map)) { n += 1; map[s.speaker] = "화자 " + n; }
+      return { id: _uid("s"), start: s.start || 0, end: s.end || 0, text: (s.text || "").trim(), speaker: map[s.speaker] };
+    }).filter(function (x) { return x.text; });
+  };
+
   // 전사 텍스트 → 세그먼트(문장 단위, 타임스탬프 없음). 인터뷰·사용성 공용.
   NS.textToSegments = function (text, speaker) {
     var parts = String(text || "").replace(/([.!?。！？…])\s+/g, "$1\n").split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean);

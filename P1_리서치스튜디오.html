@@ -433,6 +433,7 @@ function InterviewPanel({settings,openSettings,toast}){
   const[whisperModel,setWhisperModel]=useState(sv.whisperModel||((window.UXAX&&UXAX.WHISPER_BEST)||WHISPER_MODELS[1].id));const[language,setLanguage]=useState(sv.language||"korean");
   const[sttPhase,setSttPhase]=useState("");const[sttBusy,setSttBusy]=useState(false);const[sumBusy,setSumBusy]=useState(false);const[sttProg,setSttProg]=useState(0);const[dragOver,setDragOver]=useState(false);
   const[pasteMode,setPasteMode]=useState(false);const[pasteText,setPasteText]=useState("");
+  const[diarize,setDiarize]=useState(false);
   const audioRef=useRef(null);
   const projectBrief=loadBrief();
   useEffect(()=>{save(K,{ctx,segments,summary,whisperModel,language,transMeta})},[ctx,segments,summary,whisperModel,language,transMeta]);
@@ -445,7 +446,11 @@ function InterviewPanel({settings,openSettings,toast}){
     let dur=0; try{dur=await audioDuration(f.url);}catch(e){}
     const est=whisperModel==="__local_sensevoice__"?Math.max(3,(dur||30)*0.4):Math.max(5,(dur||30)*(hasWebGPU()?0.9:2.6)); // 서버(GPU)는 더 빠름 반영 · 정확 ETA는 미제공
     const timer=setInterval(()=>{const el=(performance.now()-t0)/1000;setSttProg(Math.min(0.96,el/est));},250);
-    try{const res=whisperModel==="__local_sensevoice__"?await transcribeViaServer(f.file,language,(p)=>setSttPhase(p)):await transcribeFile(f.file,whisperModel,language,(p)=>setSttPhase(p));setSegments(res.chunks);setTransMeta({name:f.name,model:(WHISPER_MODELS.find(m=>m.id===whisperModel)||{}).label||whisperModel,ms:Math.round(performance.now()-t0)});setCurUrl(f.url);setSttProg(1);toast("ok","텍스트화 완료 · "+res.chunks.length+"구간");}
+    try{let res;
+      if(whisperModel==="__local_sensevoice__"&&diarize){res={chunks:UXAX.diarToSegments(await UXAX.asrDiarize(f.file,language,(p)=>setSttPhase(p))),duration:0};}
+      else if(whisperModel==="__local_sensevoice__"){res=await transcribeViaServer(f.file,language,(p)=>setSttPhase(p));}
+      else{res=await transcribeFile(f.file,whisperModel,language,(p)=>setSttPhase(p));}
+      setSegments(res.chunks);setTransMeta({name:f.name,model:((WHISPER_MODELS.find(m=>m.id===whisperModel)||{}).label||whisperModel)+((diarize&&whisperModel==="__local_sensevoice__")?" +화자분리":""),ms:Math.round(performance.now()-t0)});setCurUrl(f.url);setSttProg(1);toast("ok","텍스트화 완료 · "+res.chunks.length+"구간");}
     catch(e){toast("error","텍스트화 실패: "+(e.message||e));setSttPhase("");}
     finally{clearInterval(timer);setSttBusy(false);}
   };
@@ -485,6 +490,7 @@ function InterviewPanel({settings,openSettings,toast}){
         <div className="space-y-3">
           <Field label="텍스트화 모델" hint="모델별 비교 가능"><select className={inputCls} value={whisperModel} onChange={e=>setWhisperModel(e.target.value)} disabled={sttBusy}>{WHISPER_MODELS.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select></Field>
           <Field label="언어"><select className={inputCls} value={language} onChange={e=>setLanguage(e.target.value)} disabled={sttBusy}><option value="korean">한국어</option><option value="english">English</option><option value="japanese">日本語</option><option value="auto">자동 감지</option></select></Field>
+          {whisperModel==="__local_sensevoice__"&&<label className="flex cursor-pointer items-center gap-2 text-[12.5px] text-slate-600"><input type="checkbox" className="accent-brand" checked={diarize} onChange={e=>setDiarize(e.target.checked)} disabled={sttBusy}/>👥 화자 자동 분리 <span className="text-slate-400">(누가 말했는지 자동 구분 · pyannote)</span></label>}
           {!hasWebGPU()&&<div className="text-[12px] text-amber-600">🐢 이 브라우저는 텍스트화가 느릴 수 있어요 — Chrome·Edge 권장</div>}
         </div>
         <label className={cx("flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center transition",dragOver?"scale-[1.01] border-brand bg-brand-light":"border-hair bg-brand-faint/40 hover:border-brand/40",sttBusy&&"pointer-events-none opacity-60")} onDragOver={e=>{e.preventDefault();if(!dragOver)setDragOver(true);}} onDragEnter={e=>{e.preventDefault();setDragOver(true);}} onDragLeave={e=>{e.preventDefault();setDragOver(false);}} onDrop={e=>{e.preventDefault();setDragOver(false);addFiles(e.dataTransfer.files);}}>
