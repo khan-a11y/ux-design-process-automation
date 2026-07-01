@@ -212,7 +212,15 @@
   .rev{opacity:0;transform:translateY(14px);transition:opacity .6s ease,transform .6s ease}
   .rev.in{opacity:1;transform:none}
   @media (prefers-reduced-motion:reduce){.rev{opacity:1;transform:none;transition:none}}
-a.chip{cursor:pointer}a.chip:hover{text-decoration:none;filter:brightness(.97);transform:translateY(-1px)}.shot-link{color:inherit;text-decoration:none}.shot-link:hover b{text-decoration:underline;color:var(--brand-ink)}</style>
+a.chip{cursor:pointer}a.chip:hover{text-decoration:none;filter:brightness(.97);transform:translateY(-1px)}
+.shot-a{display:block;color:inherit;text-decoration:none}
+.shot-a:hover figcaption b{text-decoration:underline;color:var(--brand-ink)}
+figure.shot{transition:box-shadow .18s ease,border-color .18s ease,transform .18s ease}
+figure.shot:hover{border-color:var(--brand-tint-2);box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+figure.shot .go{font-size:11px;color:var(--brand-ink);font-weight:700}
+.improve{margin-top:6px;display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--warn-ink);background:var(--warn-bg);padding:2px 6px;border-radius:5px;white-space:nowrap}
+.mimic{display:block;margin-top:6px;font-size:12.5px;color:var(--brand-ink)}
+.mimic b{color:var(--brand-ink)}</style>
 
 <header class="top">
   <div class="wrap">
@@ -221,7 +229,7 @@ a.chip{cursor:pointer}a.chip:hover{text-decoration:none;filter:brightness(.97);t
     <p class="lede">7개 스튜디오·29개 자동화 과제로 묶은 무빌드 단일 HTML 도구를 시중 UX 도구 지형에 올려놓고 비교함. 그리고 각 단계를 <b>무료·오픈소스 전문도구와 병행</b>하기 위한 연계 지점을 전수 정리함 — 개발 방향 판단용 자료.</p>
     <div class="meta">
       <span class="pill brand">제작일 2026-07-01</span>
-      <span class="pill brand">v0.1</span>
+      <span class="pill brand">v0.11</span>
       <span class="pill">비교 대상 20+ 도구</span>
       <span class="pill">전부 무료 기준</span>
       <span class="pill">근거: 웹 리서치 + 실화면 캡처</span>
@@ -361,12 +369,12 @@ a.chip{cursor:pointer}a.chip:hover{text-decoration:none;filter:brightness(.97);t
     </div>
 
     <div class="gal">
-      <figure class="shot rev"><img src="__IMG_penpot__" alt="Penpot 홈페이지 캡처"><figcaption><a class="shot-link" href="https://penpot.app" target="_blank" rel="noopener"><b>Penpot</b></a> — 오픈소스 디자인 플랫폼. W3C 디자인 토큰·자체호스팅.<span class="c-chip"><span class="chip oss"><span class="d"></span>OSS 무료</span></span></figcaption></figure>
-      <figure class="shot rev"><img src="__IMG_posthog__" alt="PostHog 홈페이지 캡처"><figcaption><a class="shot-link" href="https://posthog.com" target="_blank" rel="noopener"><b>PostHog</b></a> — 제품 분석·세션리플레이·A/B·플래그 올인원.<span class="c-chip"><span class="chip oss"><span class="d"></span>MIT · 무료티어</span></span></figcaption></figure>
-      <figure class="shot rev"><img src="__IMG_maze__" alt="Maze 홈페이지 캡처"><figcaption><a class="shot-link" href="https://maze.co" target="_blank" rel="noopener"><b>Maze</b></a> — 프로토타입 사용성 테스트. free-forever(참여자 직접).<span class="c-chip"><span class="chip free"><span class="d"></span>무료 플랜</span></span></figcaption></figure>
-      <figure class="shot rev"><img src="__IMG_clarity__" alt="Microsoft Clarity 홈페이지 캡처"><figcaption><a class="shot-link" href="https://clarity.microsoft.com" target="_blank" rel="noopener"><b>Microsoft Clarity</b></a> — 히트맵·세션리플레이. 완전 무료.<span class="c-chip"><span class="chip free"><span class="d"></span>완전 무료</span></span></figcaption></figure>
-      <figure class="shot rev"><img src="__IMG_uxpilot__" alt="UX Pilot 홈페이지 캡처"><figcaption><a class="shot-link" href="https://uxpilot.ai" target="_blank" rel="noopener"><b>UX Pilot</b></a> — 우리와 가장 넓게 겹치는 올인원 경쟁자.<span class="c-chip"><span class="chip freemium"><span class="d"></span>부분무료 $0~$31</span></span></figcaption></figure>
-      <figure class="shot rev"><img src="__IMG_tally__" alt="Tally 홈페이지 캡처"><figcaption><b>Tally</b> — 설문 폼. 무제한 폼·무제한 응답 무료.<span class="c-chip"><span class="chip free"><span class="d"></span>무제한 무료</span></span></figcaption></figure>
+      <figure class="shot rev"><a class="shot-a" href="https://penpot.app" target="_blank" rel="noopener"><img src="__IMG_penpot__" alt="Penpot 홈페이지 캡처"><figcaption><b>Penpot <span class="go">↗</span></b> — 오픈소스 디자인 플랫폼. W3C 디자인 토큰·자체호스팅.<span class="c-chip"><span class="chip oss"><span class="d"></span>OSS 무료</span></span></figcaption></a></figure>
+      <figure class="shot rev"><a class="shot-a" href="https://posthog.com" target="_blank" rel="noopener"><img src="__IMG_posthog__" alt="PostHog 홈페이지 캡처"><figcaption><b>PostHog <span class="go">↗</span></b> — 제품 분석·세션리플레이·A/B·플래그 올인원.<span class="c-chip"><span class="chip oss"><span class="d"></span>MIT · 무료티어</span></span></figcaption></a></figure>
+      <figure class="shot rev"><a class="shot-a" href="https://maze.co" target="_blank" rel="noopener"><img src="__IMG_maze__" alt="Maze 홈페이지 캡처"><figcaption><b>Maze <span class="go">↗</span></b> — 프로토타입 사용성 테스트. free-forever(참여자 직접).<span class="c-chip"><span class="chip free"><span class="d"></span>무료 플랜</span></span></figcaption></a></figure>
+      <figure class="shot rev"><a class="shot-a" href="https://clarity.microsoft.com" target="_blank" rel="noopener"><img src="__IMG_clarity__" alt="Microsoft Clarity 홈페이지 캡처"><figcaption><b>Microsoft Clarity <span class="go">↗</span></b> — 히트맵·세션리플레이. 완전 무료.<span class="c-chip"><span class="chip free"><span class="d"></span>완전 무료</span></span></figcaption></a></figure>
+      <figure class="shot rev"><a class="shot-a" href="https://uxpilot.ai" target="_blank" rel="noopener"><img src="__IMG_uxpilot__" alt="UX Pilot 홈페이지 캡처"><figcaption><b>UX Pilot <span class="go">↗</span></b> — 우리와 가장 넓게 겹치는 올인원 경쟁자.<span class="c-chip"><span class="chip freemium"><span class="d"></span>부분무료 $0~$31</span></span></figcaption></a></figure>
+      <figure class="shot rev"><a class="shot-a" href="https://tally.so" target="_blank" rel="noopener"><img src="__IMG_tally__" alt="Tally 홈페이지 캡처"><figcaption><b>Tally <span class="go">↗</span></b> — 설문 폼. 무제한 폼·무제한 응답 무료.<span class="c-chip"><span class="chip free"><span class="d"></span>무제한 무료</span></span></figcaption></a></figure>
     </div>
     <p class="map-note">※ 캡처는 각 서비스 공개 홈페이지를 헤드리스 브라우저로 직접 촬영(2026-07-01). 마케팅 페이지라 제품 UI 전체는 아님 — 성격·포지션 참고용.</p>
   </section>
@@ -381,30 +389,30 @@ a.chip{cursor:pointer}a.chip:hover{text-decoration:none;filter:brightness(.97);t
       <div class="map-box rev">
         <h3>맵 A · 커버 범위 × 개방성(무료·로컬)</h3>
         <p class="cap">오른쪽 위로 갈수록 “전 과정을 무료·로컬로”. 그 코너는 사실상 비어 있음.</p>
-        <svg viewBox="0 0 800 560" role="img" aria-label="포지셔닝 맵: 가로축 커버 범위, 세로축 개방성">
+        <svg viewBox="0 0 860 600" role="img" aria-label="포지셔닝 맵 A: 가로축 커버 범위, 세로축 개방성">
           <defs>
-            <marker id="ah" markerWidth="9" markerHeight="9" refX="6" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#8a8a99"/></marker>
+            <marker id="ahA" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a8a99"/></marker>
           </defs>
-          <rect x="420" y="60" width="320" height="185" fill="#eef0fb" opacity="0.6"/>
-          <text x="726" y="82" text-anchor="end" font-family="ui-monospace,monospace" font-size="12" fill="#3c46a8" font-weight="700">빈 칸: 전과정 × 무료·로컬</text>
-          <line x1="100" y1="470" x2="748" y2="470" stroke="#dcdce4" stroke-width="1.5" marker-end="url(#ah)"/>
-          <line x1="100" y1="470" x2="100" y2="52" stroke="#dcdce4" stroke-width="1.5" marker-end="url(#ah)"/>
-          <line x1="420" y1="60" x2="420" y2="470" stroke="#eef0fb" stroke-width="1"/>
-          <line x1="100" y1="265" x2="740" y2="265" stroke="#eef0fb" stroke-width="1"/>
-          <text x="424" y="496" font-size="12.5" fill="#8a8a99" font-family="ui-monospace,monospace">단일 단계 특화 →→→ 전 과정 통합</text>
-          <text x="86" y="260" font-size="12.5" fill="#8a8a99" font-family="ui-monospace,monospace" transform="rotate(-90 86,260)" text-anchor="middle">유료·클라우드 →→→ 무료·로컬·오픈</text>
-          <g font-size="12.5" fill="#54545f">
-            <circle cx="262" cy="392" r="7" fill="#cf4b5c"/><text x="274" y="396">Dovetail</text>
-            <circle cx="258" cy="352" r="7" fill="#cf4b5c"/><text x="270" y="356">Notably</text>
-            <circle cx="300" cy="272" r="7" fill="#c07d0a"/><text x="312" y="276">Maze</text>
-            <circle cx="452" cy="250" r="7" fill="#c07d0a"/><text x="464" y="254">UX Pilot</text>
-            <circle cx="420" cy="214" r="7" fill="#c07d0a"/><text x="432" y="206">Figma</text>
-            <circle cx="306" cy="120" r="7" fill="#5e6ad2"/><text x="318" y="124">Penpot</text>
-            <circle cx="250" cy="150" r="7" fill="#5e6ad2"/><text x="150" y="154">PostHog</text>
+          <rect x="480" y="70" width="320" height="210" rx="10" fill="#eef0fb"/>
+          <text x="640" y="106" text-anchor="middle" font-family="ui-monospace,monospace" font-size="14.5" fill="#3c46a8" font-weight="700">빈 칸: 전 과정 × 무료·로컬</text>
+          <line x1="480" y1="70" x2="480" y2="490" stroke="#e3e6f9" stroke-width="1"/>
+          <line x1="120" y1="280" x2="800" y2="280" stroke="#e3e6f9" stroke-width="1"/>
+          <line x1="120" y1="490" x2="820" y2="490" stroke="#c9c9d4" stroke-width="2" marker-end="url(#ahA)"/>
+          <line x1="120" y1="490" x2="120" y2="56" stroke="#c9c9d4" stroke-width="2" marker-end="url(#ahA)"/>
+          <text x="472" y="528" text-anchor="middle" font-size="15" fill="#54545f" font-family="ui-monospace,monospace">단일 단계 특화 → 전 과정 통합</text>
+          <text x="90" y="280" transform="rotate(-90 90,280)" text-anchor="middle" font-size="15" fill="#54545f" font-family="ui-monospace,monospace">유료·클라우드 → 무료·로컬·오픈</text>
+          <g font-size="16.5" fill="#54545f">
+            <circle cx="250" cy="422" r="8" fill="#cf4b5c"/><text x="267" y="428">Dovetail</text>
+            <circle cx="246" cy="372" r="8" fill="#cf4b5c"/><text x="263" y="378">Notably</text>
+            <circle cx="322" cy="316" r="8" fill="#c07d0a"/><text x="339" y="322">Maze</text>
+            <circle cx="488" cy="348" r="8" fill="#c07d0a"/><text x="505" y="354">UX Pilot</text>
+            <circle cx="430" cy="292" r="8" fill="#c07d0a"/><text x="447" y="286">Figma</text>
+            <circle cx="308" cy="156" r="8" fill="#5e6ad2"/><text x="325" y="162">Penpot</text>
+            <circle cx="374" cy="202" r="8" fill="#5e6ad2"/><text x="391" y="208">PostHog</text>
           </g>
-          <circle cx="676" cy="98" r="15" fill="#5e6ad2" opacity="0.16"/>
-          <circle cx="676" cy="98" r="8.5" fill="#5e6ad2" stroke="#fff" stroke-width="2"/>
-          <text x="662" y="86" text-anchor="end" font-size="13" font-weight="800" fill="#3c46a8">우리 스튜디오</text>
+          <circle cx="652" cy="178" r="19" fill="#5e6ad2" opacity="0.16"/>
+          <circle cx="652" cy="178" r="9.5" fill="#5e6ad2" stroke="#fff" stroke-width="2.5"/>
+          <text x="652" y="216" text-anchor="middle" font-size="15.5" font-weight="800" fill="#3c46a8">우리 스튜디오</text>
         </svg>
         <p class="map-note">Dovetail·Notably는 좁고 유료(좌하), Penpot·PostHog는 무료·오픈이나 단계 특화(좌상). 우리만 우상단.</p>
       </div>
@@ -412,24 +420,24 @@ a.chip{cursor:pointer}a.chip:hover{text-decoration:none;filter:brightness(.97);t
       <div class="map-box rev">
         <h3>맵 B · 학습·자기설명성 × 실무 깊이</h3>
         <p class="cap">우리(좌상)와 전문도구群(우하)은 대각선으로 <b>상보적</b>. 겹치지 않으니 병행이 정답.</p>
-        <svg viewBox="0 0 800 560" role="img" aria-label="포지셔닝 맵: 가로축 실무 깊이, 세로축 학습성">
-          <line x1="230" y1="150" x2="560" y2="380" stroke="#c9cdf0" stroke-width="2.5" stroke-dasharray="7 6"/>
-          <text x="398" y="252" font-size="12" fill="#8a8a99" font-family="ui-monospace,monospace" transform="rotate(35 398,252)" text-anchor="middle">병행 = 대각선 전체 커버</text>
-          <line x1="100" y1="470" x2="748" y2="470" stroke="#dcdce4" stroke-width="1.5" marker-end="url(#ah)"/>
-          <line x1="100" y1="470" x2="100" y2="52" stroke="#dcdce4" stroke-width="1.5" marker-end="url(#ah)"/>
-          <text x="424" y="496" font-size="12.5" fill="#8a8a99" font-family="ui-monospace,monospace">얕음(초안) →→→ 실무 깊이·품질 높음</text>
-          <text x="86" y="260" font-size="12.5" fill="#8a8a99" font-family="ui-monospace,monospace" transform="rotate(-90 86,260)" text-anchor="middle">가르쳐줌 낮음 →→→ 자기설명·학습성 높음</text>
-          <circle cx="238" cy="140" r="15" fill="#5e6ad2" opacity="0.16"/>
-          <circle cx="238" cy="140" r="8.5" fill="#5e6ad2" stroke="#fff" stroke-width="2"/>
-          <text x="252" y="130" font-size="13" font-weight="800" fill="#3c46a8">우리 스튜디오</text>
-          <text x="252" y="150" font-size="11.5" fill="#8a8a99">학습·통합·프라이버시</text>
-          <g font-size="12.5" fill="#54545f">
-            <circle cx="560" cy="360" r="7" fill="#0e9f6e"/><text x="536" y="352" text-anchor="end">Dovetail</text>
-            <circle cx="600" cy="400" r="7" fill="#0e9f6e"/><text x="576" y="404" text-anchor="end">Maze</text>
-            <circle cx="620" cy="330" r="7" fill="#0e9f6e"/><text x="632" y="334">Penpot</text>
-            <circle cx="650" cy="392" r="7" fill="#0e9f6e"/><text x="662" y="396">PostHog</text>
-            <circle cx="512" cy="410" r="7" fill="#0e9f6e"/><text x="500" y="424" text-anchor="end">UX Pilot</text>
+        <svg viewBox="0 0 860 600" role="img" aria-label="포지셔닝 맵 B: 가로축 실무 깊이, 세로축 학습성">
+          <line x1="252" y1="168" x2="626" y2="414" stroke="#c9cdf0" stroke-width="3" stroke-dasharray="8 7"/>
+          <line x1="120" y1="490" x2="820" y2="490" stroke="#c9c9d4" stroke-width="2" marker-end="url(#ahA)"/>
+          <line x1="120" y1="490" x2="120" y2="56" stroke="#c9c9d4" stroke-width="2" marker-end="url(#ahA)"/>
+          <text x="472" y="528" text-anchor="middle" font-size="15" fill="#54545f" font-family="ui-monospace,monospace">얕음(초안) → 실무 깊이·품질 높음</text>
+          <text x="90" y="280" transform="rotate(-90 90,280)" text-anchor="middle" font-size="15" fill="#54545f" font-family="ui-monospace,monospace">가르쳐줌 낮음 → 자기설명·학습성 높음</text>
+          <text x="432" y="268" font-size="13.5" fill="#8a8a99" font-family="ui-monospace,monospace" transform="rotate(33 432,268)" text-anchor="middle">병행 = 대각선 전체 커버</text>
+          <g font-size="16.5" fill="#54545f">
+            <circle cx="560" cy="356" r="8" fill="#0e9f6e"/><text x="544" y="352" text-anchor="end">Dovetail</text>
+            <circle cx="602" cy="400" r="8" fill="#0e9f6e"/><text x="586" y="406" text-anchor="end">Maze</text>
+            <circle cx="632" cy="330" r="8" fill="#0e9f6e"/><text x="649" y="336">Penpot</text>
+            <circle cx="660" cy="394" r="8" fill="#0e9f6e"/><text x="677" y="400">PostHog</text>
+            <circle cx="520" cy="410" r="8" fill="#0e9f6e"/><text x="504" y="424" text-anchor="end">UX Pilot</text>
           </g>
+          <circle cx="252" cy="168" r="19" fill="#5e6ad2" opacity="0.16"/>
+          <circle cx="252" cy="168" r="9.5" fill="#5e6ad2" stroke="#fff" stroke-width="2.5"/>
+          <text x="252" y="138" text-anchor="middle" font-size="15.5" font-weight="800" fill="#3c46a8">우리 스튜디오</text>
+          <text x="252" y="202" text-anchor="middle" font-size="13" fill="#8a8a99">학습·통합·프라이버시</text>
         </svg>
         <p class="map-note">우리는 “가르치며 초안까지”, 전문도구는 “깊이·품질”. 사용자를 우리에서 시작시켜 필요한 단계만 전문도구로 넘기면 학습·품질을 둘 다 얻음.</p>
       </div>
@@ -440,8 +448,9 @@ a.chip{cursor:pointer}a.chip:hover{text-decoration:none;filter:brightness(.97);t
   <section class="sec" id="matrix">
     <div class="sec-head"><span class="sec-no">04</span><div>
       <h2>29과제 × 무료 전문도구 매트릭스</h2>
-      <p class="sub">이 표가 이 문서의 핵심임. 과제별로 <b>우리 커버 강도</b>(●●● 강 / ●●○ 중 / ●○○ 초안), 붙일 <b>무료 전문도구</b>, 그리고 <b>1번 연계 우선순위</b>를 매김. 우선순위 <span class="prio p0">P0</span> 즉시 · <span class="prio p1">P1</span> 다음 · <span class="prio p2">P2</span> 이후 · <span class="prio keep">유지</span> 우리로 충분.</p>
+      <p class="sub">이 표가 이 문서의 핵심임. 과제별로 <b>우리 커버 강도</b>(<b style="color:var(--good-ink)">●●●</b> 강 / <b style="color:var(--warn-ink)">●●○</b> 중 / <b style="color:var(--crit-ink)">●○○</b> 초안), 붙일 <b>무료 전문도구</b>, <b>연계 우선순위</b>를 매김. <b>커버 2칸 이하(●●○·●○○) = 「개선 대상」</b> — 우리 커버를 끌어올릴 곳으로 표시함. 우선순위 <span class="prio p0">P0</span> 즉시 · <span class="prio p1">P1</span> 다음 · <span class="prio p2">P2</span> 이후 · <span class="prio keep">유지</span> 우리로 충분.</p>
     </div></div>
+    <div class="callout rev" style="margin-bottom:18px">🛠 <b>개선 원칙</b> — 「개선 대상」을 고칠 땐 <b>무턱대고 새로 만들지 않음</b>. 각 과제에서 이미 <b>잘 작동하는 검증된 서비스를 모방</b>(각 행 “모방 대상”)해 완성도 높게 구현함. 내부용이라 라이선스 무관. 부분적으로 완성도 높은 도구는 많지만 <b>전 과정을 한 곳에서 높은 완성도로 묶은 곳은 없음</b> — 그 빈칸을 노림.</div>
     <div class="tbl-scroll rev">
       <table class="matrix">
         <thead><tr>
@@ -452,45 +461,45 @@ a.chip{cursor:pointer}a.chip:hover{text-decoration:none;filter:brightness(.97);t
         </tr></thead>
         <tbody>
           <tr class="phase-row"><td colspan="4">P1 · 리서치 수집</td></tr>
-          <tr><td class="task">인터뷰<small>interview</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell">가이드 생성은 우리. 녹화=<b>Meet/Zoom</b> → 전사=<b>Whisper·SenseVoice</b>(로컬). AI 모의인터뷰 무료 대안은 약함.</td><td><span class="prio p1">P1</span></td></tr>
-          <tr><td class="task">설문<small>survey</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell">문항은 우리 생성. 배포·수집=<b>Google Forms</b>(완전무료)·<b>Tally</b>(무제한 무료).</td><td><span class="prio p1">P1</span></td></tr>
-          <tr><td class="task">VOC 분류<small>voc</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">브라우저 임베딩 군집·감정분류가 우리 강점. 무료 전용도구 부재 → <b>우리로 충분</b>.</td><td><span class="prio keep">유지</span></td></tr>
-          <tr><td class="task">데스크 리서치<small>desk</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell"><b>Perplexity</b>(5/일)·<b>Consensus</b>(15/월)·<b>Semantic Scholar</b>·<b>NotebookLM</b> 무료.</td><td><span class="prio p2">P2</span></td></tr>
-          <tr><td class="task">인터뷰 가이드<small>guide</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">LLM 프롬프트 기반 가이드 생성 = 우리 핵심. <b>유지</b>.</td><td><span class="prio keep">유지</span></td></tr>
+          <tr><td class="task">인터뷰<small>interview</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">인터뷰 가이드·질문 생성은 우리 강점. 부족한 건 <b>실제 녹화·정밀 전사</b> — 녹화=<b>Meet/Zoom</b>, 전사=<b>Whisper·SenseVoice</b>(로컬). AI 모의인터뷰의 무료 대안은 아직 약함.<span class="mimic"><b>모방 대상:</b> SenseVoice·Clova Note(로컬 전사)의 화자분리·타임스탬프 편집 UX</span></td><td><span class="prio p1">P1</span></td></tr>
+          <tr><td class="task">설문<small>survey</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">문항 설계·문구는 우리(LLM)가 생성. 부족한 건 <b>배포·응답 수집·집계</b> — <b>Google Forms</b>(완전무료)·<b>Tally</b>(무제한 무료)로 내보내면 수집까지 공짜.<span class="mimic"><b>모방 대상:</b> Tally 폼빌더의 문항 편집·실시간 미리보기 UX</span></td><td><span class="prio p1">P1</span></td></tr>
+          <tr><td class="task">VOC 분류<small>voc</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">고객 소리(리뷰·문의)를 브라우저 임베딩으로 <b>자동 군집 + 감정 분류</b>하는 게 우리 강점. 이 조합의 무료 전용도구가 사실상 부재 → <b>우리로 충분</b>. 유지.</td><td><span class="prio keep">유지</span></td></tr>
+          <tr><td class="task">데스크 리서치<small>desk</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">질의·요약은 우리. 부족한 건 <b>근거·논문 검색의 폭과 출처 신뢰</b> — <b>Perplexity</b>(5/일)·<b>Consensus</b>(15/월)·<b>Semantic Scholar</b>·<b>NotebookLM</b> 무료.<span class="mimic"><b>모방 대상:</b> NotebookLM의 출처 인용·근거 카드 UX</span></td><td><span class="prio p2">P2</span></td></tr>
+          <tr><td class="task">인터뷰 가이드<small>guide</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">LLM 프롬프트로 목적·대상에 맞는 인터뷰 가이드를 뽑는 게 우리 핵심 기능. 무료 전용 대안이 약함 → 유지.</td><td><span class="prio keep">유지</span></td></tr>
 
           <tr class="phase-row"><td colspan="4">P2 · 합성</td></tr>
-          <tr><td class="task">어피니티<small>affinity</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">자동 군집(임베딩)이 강점. 협업 다이어그램은 <b>FigJam·Miro·Excalidraw</b>(무료)로 내보내기.</td><td><span class="prio p2">P2</span></td></tr>
-          <tr><td class="task">여정맵<small>journey</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell">초안은 우리. 시각화·공유=<b>FigJam 템플릿</b>·<b>Whimsical</b>(무료).</td><td><span class="prio p1">P1</span></td></tr>
-          <tr><td class="task">HMW<small>hmw</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">LLM 발산 = 우리. <b>유지</b>.</td><td><span class="prio keep">유지</span></td></tr>
-          <tr><td class="task">PRD<small>prd</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">문서 생성은 우리. 협업 편집은 <b>Notion</b>(무료)로 export.</td><td><span class="prio p2">P2</span></td></tr>
+          <tr><td class="task">어피니티<small>affinity</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">발췌를 임베딩으로 <b>자동 군집</b>하는 게 강점. 여럿이 붙어 옮기는 협업 편집만 <b>FigJam·Miro·Excalidraw</b>(무료)로 내보내면 됨.</td><td><span class="prio p2">P2</span></td></tr>
+          <tr><td class="task">여정맵<small>journey</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">단계·감정 초안은 우리가 생성. 부족한 건 <b>보기 좋은 시각화·공유</b> — <b>FigJam 템플릿</b>·<b>Whimsical</b>(무료).<span class="mimic"><b>모방 대상:</b> Whimsical·FigJam 여정맵 템플릿의 레인·감정곡선 UX</span></td><td><span class="prio p1">P1</span></td></tr>
+          <tr><td class="task">HMW<small>hmw</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">POV → “우리가 어떻게 하면…?” 발산은 LLM = 우리. 유지.</td><td><span class="prio keep">유지</span></td></tr>
+          <tr><td class="task">PRD<small>prd</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">요구사항 문서 초안 생성은 우리. 여럿이 편집할 때만 <b>Notion</b>(무료)으로 export.</td><td><span class="prio p2">P2</span></td></tr>
 
           <tr class="phase-row"><td colspan="4">P3 · 구조·아이디어</td></tr>
-          <tr><td class="task">아이디어<small>idea</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">LLM 발산·평가 = 우리. <b>유지</b>.</td><td><span class="prio keep">유지</span></td></tr>
-          <tr><td class="task">IA<small>ia</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell">구조 초안 우리. 다이어그램=<b>Whimsical·draw.io</b>(무료/오픈)·<b>FigJam</b>.</td><td><span class="prio p1">P1</span></td></tr>
-          <tr><td class="task">플로우<small>flow</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell"><b>Mermaid</b> 코드로 내보내면 GitHub·Notion·draw.io 어디서나 렌더. <b>Excalidraw</b>.</td><td><span class="prio p1">P1</span></td></tr>
-          <tr><td class="task">우선순위<small>priority</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">RICE·매트릭스 계산은 우리(코드 집계). 스프레드시트 export만.</td><td><span class="prio keep">유지</span></td></tr>
+          <tr><td class="task">아이디어<small>idea</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">아이디어 발산 + 임팩트/난이도 평가(점수화)는 LLM·코드 = 우리. 유지.</td><td><span class="prio keep">유지</span></td></tr>
+          <tr><td class="task">IA<small>ia</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">정보구조 초안은 우리. 부족한 건 <b>트리·사이트맵 다이어그램 편집</b> — <b>Whimsical·draw.io</b>(무료/오픈)·<b>FigJam</b>.<span class="mimic"><b>모방 대상:</b> Whimsical·draw.io의 트리·사이트맵 편집 UX</span></td><td><span class="prio p1">P1</span></td></tr>
+          <tr><td class="task">플로우<small>flow</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">화면 흐름 초안은 우리. <b>Mermaid</b> 코드로 내보내면 GitHub·Notion·draw.io 어디서나 렌더·편집. <b>Excalidraw</b>도.<span class="mimic"><b>모방 대상:</b> Mermaid Live Editor의 코드↔다이어그램 실시간 편집</span></td><td><span class="prio p1">P1</span></td></tr>
+          <tr><td class="task">우선순위<small>priority</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">RICE·임팩트/난이도 매트릭스 계산은 우리(코드가 실집계). 스프레드시트 export만 있으면 충분. 유지.</td><td><span class="prio keep">유지</span></td></tr>
 
           <tr class="phase-row"><td colspan="4">P4 · 콘텐츠</td></tr>
-          <tr><td class="task">UX 라이팅<small>writing</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">LLM 카피 = 우리. Figma 안 반영은 <b>Frontitude 플러그인</b>(무료체험).</td><td><span class="prio p2">P2</span></td></tr>
-          <tr><td class="task">로컬라이즈<small>localize</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell">LLM 번역 우리. i18n 키 관리=<b>Frontitude/Localazy</b>(부분무료).</td><td><span class="prio p2">P2</span></td></tr>
-          <tr><td class="task">더미데이터<small>dummy</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">생성 우리 + <b>Faker.js</b>(오픈) 패턴. <b>유지</b>.</td><td><span class="prio keep">유지</span></td></tr>
+          <tr><td class="task">UX 라이팅<small>writing</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">화면 카피 생성은 LLM = 우리. Figma 안 반영만 <b>Frontitude 플러그인</b>(무료체험).</td><td><span class="prio p2">P2</span></td></tr>
+          <tr><td class="task">로컬라이즈<small>localize</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">다국어 번역은 LLM = 우리. 부족한 건 <b>i18n 키 관리·동기화</b> — <b>Frontitude/Localazy</b>(부분무료).<span class="mimic"><b>모방 대상:</b> Localazy·Frontitude의 키-값 관리·문맥 미리보기 UX</span></td><td><span class="prio p2">P2</span></td></tr>
+          <tr><td class="task">더미데이터<small>dummy</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">현실적 더미 생성은 우리 + <b>Faker.js</b>(오픈) 패턴 차용. 유지.</td><td><span class="prio keep">유지</span></td></tr>
 
           <tr class="phase-row"><td colspan="4">P5 · 설계·핸드오프</td></tr>
-          <tr><td class="task">와이어프레임<small>wire</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell">초안 우리. 편집·고fidelity=<b>Penpot</b>(오픈)·<b>Figma</b>·<b>Uizard/UX Pilot</b>(무료티어).</td><td><span class="prio p1">P1</span></td></tr>
-          <tr><td class="task">디자인 토큰<small>token</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell"><b>W3C Design Tokens JSON</b>으로 내보내면 <b>Penpot·Style Dictionary·Tokens Studio</b>가 그대로 읽음. 최우선 연계.</td><td><span class="prio p0">P0</span></td></tr>
-          <tr><td class="task">코드 스펙<small>codespec</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell"><b>Penpot</b>(SVG/CSS/HTML 실코드)·<b>Figma Dev Mode</b>(무료)로 핸드오프.</td><td><span class="prio p1">P1</span></td></tr>
-          <tr><td class="task">체인지로그<small>changelog</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">버전 로그 생성 우리 + git. <b>유지</b>.</td><td><span class="prio keep">유지</span></td></tr>
+          <tr><td class="task">와이어프레임<small>wire</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">화면 구조 초안은 우리. 부족한 건 <b>편집·고fidelity</b> — <b>Penpot</b>(오픈)·<b>Figma</b>·<b>Uizard/UX Pilot</b>(무료티어).<span class="mimic"><b>모방 대상:</b> Uizard·Penpot의 드래그 와이어 편집 UX</span></td><td><span class="prio p1">P1</span></td></tr>
+          <tr><td class="task">디자인 토큰<small>token</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">토큰 표 관리는 우리. <b>W3C Design Tokens JSON</b>으로 내보내면 <b>Penpot·Style Dictionary·Tokens Studio</b>가 무변환으로 읽어 코드(CSS/Tailwind)까지 이어짐. 최우선 연계.<span class="mimic"><b>모방 대상:</b> Tokens Studio의 토큰 그룹·별칭·플랫폼 변환 UX</span></td><td><span class="prio p0">P0</span></td></tr>
+          <tr><td class="task">코드 스펙<small>codespec</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">요소·측정 스펙 초안은 우리. 실코드 핸드오프는 <b>Penpot</b>(SVG/CSS/HTML)·<b>Figma Dev Mode</b>(무료).<span class="mimic"><b>모방 대상:</b> Figma Dev Mode·Penpot inspect의 코드·측정 패널</span></td><td><span class="prio p1">P1</span></td></tr>
+          <tr><td class="task">체인지로그<small>changelog</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">버전 로그 생성은 우리 + git. 유지.</td><td><span class="prio keep">유지</span></td></tr>
 
           <tr class="phase-row"><td colspan="4">P6 · 검증</td></tr>
-          <tr><td class="task">사용성 테스트<small>usability</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell">설계·태스크는 우리. 실참여자 테스트=<b>Maze</b>(free-forever)·<b>Lyssna</b>(무료티어)·<b>PostHog</b> 세션리플레이.</td><td><span class="prio p1">P1</span></td></tr>
-          <tr><td class="task">휴리스틱<small>heuristic</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">체크리스트·규칙 점검 우리. 예측 히트맵은 <b>UX Pilot</b>(무료).</td><td><span class="prio keep">유지</span></td></tr>
-          <tr><td class="task">QA·접근성<small>qa</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell">색대비는 우리 코드로. WCAG 감사=<b>axe DevTools·WAVE·Lighthouse·Pa11y</b>(전부 무료).</td><td><span class="prio p2">P2</span></td></tr>
+          <tr><td class="task">사용성 테스트<small>usability</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">테스트 설계·태스크는 우리. 부족한 건 <b>실참여자 모집·측정</b> — <b>Maze</b>(free-forever)·<b>Lyssna</b>(무료티어)·<b>PostHog</b> 세션리플레이.<span class="mimic"><b>모방 대상:</b> Maze의 태스크 플로우 빌더·성공률 리포트 UX</span></td><td><span class="prio p1">P1</span></td></tr>
+          <tr><td class="task">휴리스틱<small>heuristic</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">닐슨 10원칙 체크리스트·규칙 점검은 우리. 예측 히트맵만 <b>UX Pilot</b>(무료). 유지.</td><td><span class="prio keep">유지</span></td></tr>
+          <tr><td class="task">QA·접근성<small>qa</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">색대비는 우리 코드로 실계산. 전체 <b>WCAG 감사</b>는 <b>axe DevTools·WAVE·Lighthouse·Pa11y</b>(전부 무료) — 자동은 30~40%만 잡음.<span class="mimic"><b>모방 대상:</b> axe DevTools·Lighthouse의 위반 목록·심각도 리포트 UX</span></td><td><span class="prio p2">P2</span></td></tr>
 
           <tr class="phase-row"><td colspan="4">P7 · 운영</td></tr>
-          <tr><td class="task">피드백 분류<small>feedback</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">분류·요약 우리. 실사용 수집=<b>Microsoft Clarity</b>(완전무료).</td><td><span class="prio p2">P2</span></td></tr>
-          <tr><td class="task">A/B 테스트<small>ab</small></td><td><span class="cover s1">●○○</span></td><td class="tools-cell">설계·계산 초안만. 실행=<b>PostHog</b>(무료 1M플래그)·<b>GrowthBook</b>(자체호스팅 무제한).</td><td><span class="prio p0">P0</span></td></tr>
-          <tr><td class="task">이상탐지<small>anomaly</small></td><td><span class="cover s2">●●○</span></td><td class="tools-cell">간이 통계 우리. 실트래픽=<b>PostHog·Matomo</b>(오픈)·<b>Clarity</b>.</td><td><span class="prio p2">P2</span></td></tr>
-          <tr><td class="task">운영 대시<small>ops</small></td><td><span class="cover s1">●○○</span></td><td class="tools-cell">실서비스 지표는 우리 범위 밖. <b>Clarity·PostHog·Matomo</b>로 이관.</td><td><span class="prio p0">P0</span></td></tr>
+          <tr><td class="task">피드백 분류<small>feedback</small></td><td><span class="cover s3">●●●</span></td><td class="tools-cell">피드백 분류·요약은 우리. 실사용 수집만 <b>Microsoft Clarity</b>(완전무료). 유지.</td><td><span class="prio p2">P2</span></td></tr>
+          <tr><td class="task">A/B 테스트<small>ab</small></td><td><span class="cover s1">●○○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">실험 설계·표본 계산 초안만 가능. 실행·측정은 우리 범위 밖 — <b>PostHog</b>(무료 1M 플래그)·<b>GrowthBook</b>(자체호스팅 무제한).<span class="mimic"><b>모방 대상:</b> PostHog·GrowthBook의 실험 설정·지표 대시보드</span></td><td><span class="prio p0">P0</span></td></tr>
+          <tr><td class="task">이상탐지<small>anomaly</small></td><td><span class="cover s2">●●○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">간이 통계·이상치 표시는 우리. 실트래픽 기반은 <b>PostHog·Matomo</b>(오픈)·<b>Clarity</b>.<span class="mimic"><b>모방 대상:</b> PostHog·Matomo의 추세·알림·퍼널 UX</span></td><td><span class="prio p2">P2</span></td></tr>
+          <tr><td class="task">운영 대시<small>ops</small></td><td><span class="cover s1">●○○</span><div class="improve">↑ 개선 대상</div></td><td class="tools-cell">실서비스 지표는 우리 범위 밖(브라우저·1인). <b>Clarity·PostHog·Matomo</b>로 이관.<span class="mimic"><b>모방 대상:</b> Clarity·PostHog의 운영 대시보드</span></td><td><span class="prio p0">P0</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -631,7 +640,7 @@ a.chip{cursor:pointer}a.chip:hover{text-decoration:none;filter:brightness(.97);t
 
 <footer class="bot">
   <div class="wrap">
-    <span>UX 디자인 프로세스 자동화 · 경쟁 벤치마킹 &amp; 무료 연계 전략 · v0.1 · 제작일 2026-07-01</span>
+    <span>UX 디자인 프로세스 자동화 · 경쟁 벤치마킹 &amp; 무료 연계 전략 · v0.11 · 제작일 2026-07-01</span>
     <span>근거: 웹 리서치 + 실화면 캡처 · 숫자는 출처 표기(환각 방지)</span>
   </div>
 </footer>
