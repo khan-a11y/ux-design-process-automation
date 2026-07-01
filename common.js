@@ -238,6 +238,44 @@ ${contexts}`;
     }
   };
 
+  /* ---------- 로컬 AI 서버(SenseVoice 전사 · Donut OCR) 연계 ----------
+     D:\AI_Models\asr\server.py (localhost:11435, GPU, 무료·오프라인). Ollama와 동일한 로컬 fetch.
+     7파일 복제 방지 위해 여기 한곳에만 두고 각 앱(P1 인터뷰·데스크, P6 사용성 등)이 UXAX.asr* 호출.
+     start-asr.bat 또는 자동시작(asr-autostart.vbs)으로 서버가 떠 있어야 함. */
+  NS.ASR_URL = "http://127.0.0.1:11435";
+  var _ASR_LANG = { korean: "ko", english: "en", japanese: "ja", auto: "auto" };
+  NS.asrHealth = async function () {
+    try { var r = await fetch(NS.ASR_URL + "/health"); return r.ok ? await r.json() : null; } catch (e) { return null; }
+  };
+  // 오디오 파일 → 텍스트(SenseVoice). onPhase(문자열) 콜백으로 진행 표시. 다중 공백 정리해 반환.
+  NS.asrTranscribe = async function (file, lang, onPhase) {
+    onPhase && onPhase("🖥️ 로컬 서버로 전송 중…");
+    var fd = new FormData(); fd.append("audio", file); fd.append("lang", _ASR_LANG[lang] || lang || "auto");
+    onPhase && onPhase("🖥️ 서버에서 전사 중… (GPU)");
+    var res;
+    try { res = await fetch(NS.ASR_URL + "/transcribe", { method: "POST", body: fd }); }
+    catch (e) { throw new Error("로컬 ASR 서버에 연결하지 못했어요 — D:\\AI_Models\\asr\\start-asr.bat 를 켜세요(자동시작 등록 시 재로그인)."); }
+    if (!res.ok) throw new Error("로컬 서버 오류 " + res.status);
+    var d = await res.json(); if (d.error) throw new Error(d.error);
+    return (d.text || "").replace(/[ \t]{2,}/g, " ").trim();
+  };
+  // 문서/이미지 파일 → 텍스트(Donut). task 기본 cord-v2(영수증·양식). 다중 공백 정리.
+  NS.asrOcr = async function (file, task, onPhase) {
+    onPhase && onPhase("🖥️ 로컬 Donut OCR 중… (GPU)");
+    var fd = new FormData(); fd.append("image", file); if (task) fd.append("task", task);
+    var res;
+    try { res = await fetch(NS.ASR_URL + "/ocr", { method: "POST", body: fd }); }
+    catch (e) { throw new Error("로컬 OCR 서버에 연결하지 못했어요 — D:\\AI_Models\\asr\\start-asr.bat 를 켜세요."); }
+    if (!res.ok) throw new Error("로컬 서버 오류 " + res.status);
+    var d = await res.json(); if (d.error) throw new Error(d.error);
+    return (d.text || "").replace(/\s{2,}/g, " ").trim();
+  };
+  // 전사 텍스트 → 세그먼트(문장 단위, 타임스탬프 없음). 인터뷰·사용성 공용.
+  NS.textToSegments = function (text, speaker) {
+    var parts = String(text || "").replace(/([.!?。！？…])\s+/g, "$1\n").split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean);
+    return (parts.length ? parts : [String(text || "")]).map(function (t) { return { id: _uid("s"), start: 0, end: 0, text: t, speaker: speaker || "화자 1" }; });
+  };
+
   /* ---------- 노출 ---------- */
   NS.PROJECT_KEY = PROJECT_KEY;
   NS.loadProject = loadProject;
